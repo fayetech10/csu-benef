@@ -64,6 +64,24 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector)
             else "medical_history/$adherentId"
     }
 
+    object DependentDetails : Screen(
+        "dependent_details/{adherentId}/{pcId}",
+        "Détails Dépendent",
+        Icons.Default.Person
+    ) {
+        fun createRoute(adherentId: String, pcId: String) = "dependent_details/$adherentId/$pcId"
+    }
+
+    object DigitalCard : Screen(
+        "digital_card/{adherentId}?pcId={pcId}",
+        "Carte Digitale",
+        Icons.Default.Person
+    ) {
+        fun createRoute(adherentId: String, pcId: String? = null) =
+            if (pcId != null) "digital_card/$adherentId?pcId=$pcId"
+            else "digital_card/$adherentId"
+    }
+
     // ── Profil & Paramètres ──
     object Profile : Screen("profile", "Profil", Icons.Default.AccountCircle)
     object PasswordUpdate : Screen("password_update", "Mot de passe", Icons.Default.Password)

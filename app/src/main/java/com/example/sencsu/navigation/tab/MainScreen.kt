@@ -19,6 +19,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -61,7 +62,7 @@ fun MainScreen(rootNavController: NavController) {
         NavHost(
             navController = nestedNavController,
             startDestination = BottomNavItem.Home.route,
-            modifier = Modifier.padding(padding),
+            modifier = Modifier.padding(top = padding.calculateTopPadding()),
             enterTransition = { fadeIn(tween(300)) },
             exitTransition = { fadeOut(tween(250)) }
         ) {
@@ -104,16 +105,25 @@ fun SubscriberBottomNavigation(
     Surface(
         modifier = Modifier
             .padding(horizontal = 24.dp, vertical = 20.dp)
-            .height(68.dp)
-            .shadow(16.dp, CircleShape, ambientColor = AppColors.BrandBlue.copy(alpha = 0.4f)),
+            .height(72.dp)
+            .shadow(24.dp, CircleShape, ambientColor = AppColors.BrandBlue.copy(alpha = 0.2f), spotColor = AppColors.BrandBlue.copy(alpha = 0.3f)),
         shape = CircleShape,
-        color = Color.White.copy(alpha = 0.98f),
-        border = BorderStroke(1.dp, AppColors.BrandBlue.copy(alpha = 0.05f))
+        color = Color.Transparent, // Let the background modifier handle it
+        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.4f))
     ) {
-        Row(
-            modifier = Modifier.fillMaxSize(),
-            verticalAlignment = Alignment.CenterVertically
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        listOf(Color.White, Color.White.copy(alpha = 0.85f))
+                    )
+                )
         ) {
+            Row(
+                modifier = Modifier.fillMaxSize(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
             items.forEachIndexed { index, item ->
                 val isSelected = currentRoute == item.route
                 
@@ -180,4 +190,5 @@ fun SubscriberBottomNavigation(
             }
         }
     }
+}
 }

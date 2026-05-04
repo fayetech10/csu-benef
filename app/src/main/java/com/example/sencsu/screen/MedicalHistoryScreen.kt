@@ -47,26 +47,37 @@ fun MedicalHistoryScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { 
-                    Column {
-                        Text("Historique Médical", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                        if (uiState.isForDependent && !uiState.dependentName.isNullOrBlank()) {
-                            Text(uiState.dependentName!!, fontSize = 12.sp, color = Color.White.copy(alpha = 0.8f))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(AppColors.BrandBlueDark, AppColors.BrandBlue)
+                        )
+                    )
+            ) {
+                TopAppBar(
+                    title = { 
+                        Column {
+                            Text("Historique Médical", fontWeight = FontWeight.Black, fontSize = 18.sp)
+                            if (uiState.isForDependent && !uiState.dependentName.isNullOrBlank()) {
+                                Text(uiState.dependentName!!, fontSize = 12.sp, color = Color.White.copy(alpha = 0.8f))
+                            }
                         }
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Retour")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = AppColors.BrandBlue,
-                    titleContentColor = Color.White,
-                    navigationIconContentColor = Color.White
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = onBack) {
+                            Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Retour")
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = Color.Transparent,
+                        titleContentColor = Color.White,
+                        navigationIconContentColor = Color.White
+                    ),
+                    modifier = Modifier.statusBarsPadding()
                 )
-            )
+            }
         }
     ) { paddingValues ->
         LazyColumn(

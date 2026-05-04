@@ -384,6 +384,8 @@ fun ProfileScreen(
                 .fillMaxWidth()
                 .padding(bottom = 24.dp)
         )
+
+        Spacer(Modifier.height(120.dp))
     }
 
     // ── Dialog de déconnexion ──

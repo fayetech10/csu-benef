@@ -49,41 +49,27 @@ fun BeneficiaryMainScreen(rootNavController: NavController) {
         NavHost(
             navController = nestedNavController,
             startDestination = BottomNavItem.Home.route,
-            modifier = Modifier.padding(padding),
+            modifier = Modifier.padding(top = padding.calculateTopPadding()),
             enterTransition = { fadeIn(tween(300)) },
             exitTransition = { fadeOut(tween(250)) }
         ) {
             composable(BottomNavItem.Home.route) {
                 BeneficiaryDashboardScreen(
                     onNavigateToHistory = { adherentId ->
-                        nestedNavController.navigate(Screen.MedicalHistory.createRoute(adherentId))
-                    }
-                )
-            }
-            composable(
-                route = Screen.MedicalHistory.route,
-                arguments = listOf(
-                    navArgument("adherentId") { type = NavType.StringType },
-                    navArgument("pcId") { 
-                        type = NavType.StringType
-                        nullable = true
-                        defaultValue = null
+                        rootNavController.navigate(Screen.MedicalHistory.createRoute(adherentId))
                     },
-                    navArgument("pcName") {
-                        type = NavType.StringType
-                        nullable = true
-                        defaultValue = null
+                    onNavigateToCard = { adherentId ->
+                        rootNavController.navigate(Screen.DigitalCard.createRoute(adherentId))
                     }
-                )
-            ) {
-                MedicalHistoryScreen(
-                    onBack = { nestedNavController.popBackStack() }
                 )
             }
             composable(BottomNavItem.Dependents.route) {
                 DependentsScreen(
                     onNavigateToHistory = { adherentId, pcId, pcName ->
-                        nestedNavController.navigate(Screen.MedicalHistory.createRoute(adherentId, pcId, pcName))
+                        rootNavController.navigate(Screen.MedicalHistory.createRoute(adherentId, pcId, pcName))
+                    },
+                    onNavigateToDetails = { adherentId, pcId ->
+                        rootNavController.navigate(Screen.DependentDetails.createRoute(adherentId, pcId))
                     }
                 ) 
             }
@@ -91,7 +77,7 @@ fun BeneficiaryMainScreen(rootNavController: NavController) {
             composable(BottomNavItem.Profile.route) {
                 ProfileScreen(
                     onNavigateToHistory = { adherentId ->
-                        nestedNavController.navigate(Screen.MedicalHistory.createRoute(adherentId))
+                        rootNavController.navigate(Screen.MedicalHistory.createRoute(adherentId))
                     },
                     onLogout = {
                         // 1. Effacer la session (DataStore + token cache HTTP)

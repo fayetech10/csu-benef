@@ -56,6 +56,7 @@ import kotlinx.coroutines.delay
 @Composable
 fun BeneficiaryDashboardScreen(
     onNavigateToHistory: (String) -> Unit = {},
+    onNavigateToCard: (String) -> Unit = {},
     onProfileClick: () -> Unit = {},
     viewModel: BeneficiaryDashboardViewModel = hiltViewModel()
 ) {
@@ -63,7 +64,6 @@ fun BeneficiaryDashboardScreen(
     val token by viewModel.sessionManager.tokenFlow.collectAsState(initial = null)
     val context = LocalContext.current
     val adherent = uiState.adherent
-    var showFullScreenCard by remember { mutableStateOf(false) }
     var showContent by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
@@ -75,348 +75,152 @@ fun BeneficiaryDashboardScreen(
         isRefreshing = uiState.isLoading,
         onRefresh = { viewModel.refresh() }
     ) {
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background),
-            contentPadding = PaddingValues(bottom = 100.dp)
-        ) {
+        Box(modifier = Modifier.fillMaxSize()) {
             if (adherent != null) {
-                // En-tête
-                item {
-                    DashboardHeader(
-                        adherent = adherent,
-                        onProfileClick = onProfileClick,
-                        token = token
-                    )
-                }
-
-                // Carte de membre
-                item {
-                    AnimatedVisibility(
-                        visible = showContent,
-                        enter = fadeIn(tween(500)) + slideInVertically(
-                            animationSpec = spring(
-                                dampingRatio = Spring.DampingRatioMediumBouncy,
-                                stiffness = Spring.StiffnessLow
-                            ),
-                            initialOffsetY = { -40 }
-                        )
-                    ) {
-                        Box(modifier = Modifier.clickable { showFullScreenCard = true }) {
-                            HealthInsuranceCard(
-                                data = adherent,
-                                sessionManager = viewModel.sessionManager,
-                                modifier = Modifier
-                                    .padding(horizontal = 16.dp)
-                                    .padding(top = 4.dp, bottom = 8.dp)
-                            )
-                        }
-                    }
-                }
-
-                // Quick Stats
-                item {
-                    AnimatedVisibility(
-                        visible = showContent,
-                        enter = fadeIn(tween(400, delayMillis = 150)) + slideInVertically(
-                            tween(400, delayMillis = 150),
-                            initialOffsetY = { 20 }
-                        )
-                    ) {
-                        QuickStatsRow(adherent)
-                    }
-                }
-
-                // Couverture
-                item {
-                    AnimatedVisibility(
-                        visible = showContent,
-                        enter = fadeIn(tween(400, delayMillis = 250)) + slideInVertically(
-                            tween(400, delayMillis = 250),
-                            initialOffsetY = { 20 }
-                        )
-                    ) {
-                        CoverageStatusCard(adherent)
-                    }
-                }
-
-                // Services médicaux récents
-                if (uiState.recentServices.isNotEmpty()) {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.background),
+                    contentPadding = PaddingValues(top = 100.dp, bottom = 120.dp)
+                ) {
+                    // 1. Carte de membre
                     item {
                         AnimatedVisibility(
                             visible = showContent,
-                            enter = fadeIn(tween(400, delayMillis = 350)) + slideInVertically(
-                                tween(400, delayMillis = 350),
+                            enter = fadeIn(tween(500)) + slideInVertically(
+                                animationSpec = spring(
+                                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                                    stiffness = Spring.StiffnessLow
+                                ),
+                                initialOffsetY = { -40 }
+                            )
+                        ) {
+                            Box(modifier = Modifier.clickable { 
+                                adherent.id?.let { onNavigateToCard(it) }
+                            }) {
+                                HealthInsuranceCard(
+                                    data = adherent,
+                                    sessionManager = viewModel.sessionManager,
+                                    modifier = Modifier
+                                        .padding(horizontal = 16.dp)
+                                        .padding(top = 12.dp, bottom = 8.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    // 2. Actions rapides
+                    item {
+                        AnimatedVisibility(
+                            visible = showContent,
+                            enter = fadeIn(tween(300, delayMillis = 100)) + slideInVertically(
+                                tween(300, delayMillis = 100), initialOffsetY = { 20 }
+                            )
+                        ) {
+                            QuickActionsRow(
+                                onHistory = { adherent.id?.let { onNavigateToHistory(it) } }
+                            )
+                        }
+                    }
+
+                    // 3. Couverture
+                    item {
+                        AnimatedVisibility(
+                            visible = showContent,
+                            enter = fadeIn(tween(400, delayMillis = 200)) + slideInVertically(
+                                tween(400, delayMillis = 200),
                                 initialOffsetY = { 20 }
                             )
                         ) {
-                            RecentServicesSection(
-                                services = uiState.recentServices,
-                                onViewAll = { adherent.id?.let { onNavigateToHistory(it) } }
-                            )
+                            CoverageStatusCard(adherent)
                         }
                     }
-                }
 
-                // Personnes en charge
-                if (!adherent.personnesCharge.isNullOrEmpty()) {
+                    // 4. Quick Stats
                     item {
                         AnimatedVisibility(
                             visible = showContent,
-                            enter = fadeIn(tween(300, delayMillis = 420))
-                        ) {
-                            DashboardSectionTitle(
-                                "Personnes en charge (${adherent.personnesCharge.size})",
-                                Icons.Rounded.FamilyRestroom
+                            enter = fadeIn(tween(400, delayMillis = 300)) + slideInVertically(
+                                tween(400, delayMillis = 300),
+                                initialOffsetY = { 20 }
                             )
+                        ) {
+                            QuickStatsRow(adherent)
                         }
                     }
-                    itemsIndexed(adherent.personnesCharge) { index, pc ->
-                        AnimatedVisibility(
-                            visible = showContent,
-                            enter = fadeIn(tween(300, delayMillis = 450 + index * 60)) +
-                                    slideInHorizontally(
-                                        tween(300, delayMillis = 450 + index * 60),
-                                        initialOffsetX = { 80 }
-                                    )
-                        ) {
-                            Column {
-                                DependantCard(pc, token, context)
-                                if (index < adherent.personnesCharge.size - 1) {
-                                    HorizontalDivider(
-                                        modifier = Modifier.padding(horizontal = 24.dp),
-                                        thickness = 0.5.dp,
-                                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                                    )
+
+                    // 5. Services médicaux récents
+                    if (uiState.recentServices.isNotEmpty()) {
+                        item {
+                            AnimatedVisibility(
+                                visible = showContent,
+                                enter = fadeIn(tween(400, delayMillis = 400)) + slideInVertically(
+                                    tween(400, delayMillis = 400),
+                                    initialOffsetY = { 20 }
+                                )
+                            ) {
+                                RecentServicesSection(
+                                    services = uiState.recentServices,
+                                    onViewAll = { adherent.id?.let { onNavigateToHistory(it) } }
+                                )
+                            }
+                        }
+                    }
+
+                    // 6. Personnes en charge
+                    if (!adherent.personnesCharge.isNullOrEmpty()) {
+                        item {
+                            AnimatedVisibility(
+                                visible = showContent,
+                                enter = fadeIn(tween(300, delayMillis = 500))
+                            ) {
+                                DashboardSectionTitle(
+                                    "Personnes en charge (${adherent.personnesCharge.size})",
+                                    Icons.Rounded.FamilyRestroom
+                                )
+                            }
+                        }
+                        itemsIndexed(adherent.personnesCharge) { index, pc ->
+                            AnimatedVisibility(
+                                visible = showContent,
+                                enter = fadeIn(tween(300, delayMillis = 550 + index * 60)) +
+                                        slideInHorizontally(
+                                            tween(300, delayMillis = 550 + index * 60),
+                                            initialOffsetX = { 80 }
+                                        )
+                            ) {
+                                Column {
+                                    DependantCard(pc, token, context)
+                                    if (index < adherent.personnesCharge.size - 1) {
+                                        HorizontalDivider(
+                                            modifier = Modifier.padding(horizontal = 24.dp),
+                                            thickness = 0.5.dp,
+                                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
-                }
-
-
-            }
-
-            // Erreur
-            if (uiState.error != null) {
-                item {
-                    Surface(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        shape = AppShapes.MediumRadius,
-                        color = AppColors.StatusRed.copy(alpha = 0.08f),
-                        border = BorderStroke(0.5.dp, AppColors.StatusRed.copy(alpha = 0.2f))
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                Icons.Rounded.ErrorOutline,
-                                contentDescription = null,
-                                tint = AppColors.StatusRed,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(Modifier.width(12.dp))
-                            Text(
-                                uiState.error!!,
-                                color = AppColors.StatusRed,
-                                fontSize = 14.sp,
-                                lineHeight = 20.sp
-                            )
+                    
+                    // 7. Erreurs éventuelles
+                    if (uiState.error != null) {
+                        item {
+                            DashboardErrorCard(uiState.error!!)
                         }
                     }
                 }
-            }
-        }
 
-        if (showFullScreenCard && adherent != null) {
-            FullScreenCardOverlay(
-                adherent = adherent,
-                token = token,
-                onClose = { showFullScreenCard = false }
-            )
-        }
-    }
-}
-
-// ─────────────────────────────────────────────
-// CARTE PLEIN ÉCRAN (Portrait)
-// ─────────────────────────────────────────────
-
-@Composable
-private fun FullScreenCardOverlay(
-    adherent: AdherentDto,
-    token: String?,
-    onClose: () -> Unit
-) {
-    Dialog(
-        onDismissRequest = onClose,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
-    ) {
-        Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.background
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-                    .padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                // Bouton fermer
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .statusBarsPadding(),
-                    horizontalArrangement = Arrangement.End
-                ) {
-                    IconButton(
-                        onClick = onClose,
-                        modifier = Modifier
-                            .background(MaterialTheme.colorScheme.surface, CircleShape)
-                            .shadow(4.dp, CircleShape)
-                    ) {
-                        Icon(Icons.Rounded.Close, contentDescription = "Fermer")
-                    }
-                }
-                
-                Spacer(Modifier.height(16.dp))
-                
-                Text(
-                    "CARTE DE COUVERTURE SANTÉ",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = AppColors.BrandBlue,
-                    letterSpacing = 1.2.sp
-                )
-
-                Spacer(Modifier.height(32.dp))
-
-                // La Carte Portrait
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .shadow(24.dp, RoundedCornerShape(28.dp)),
-                    shape = RoundedCornerShape(28.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White)
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        // Photo agrandie
-                        Surface(
-                            modifier = Modifier
-                                .size(160.dp)
-                                .shadow(8.dp, RoundedCornerShape(20.dp)),
-                            shape = RoundedCornerShape(20.dp),
-                            color = MaterialTheme.colorScheme.surfaceVariant
-                        ) {
-                            if (adherent.photo != null) {
-                                AsyncImage(
-                                    model = ImageRequest.Builder(LocalContext.current)
-                                        .data(ApiConfig.getImageUrl(adherent.photo))
-                                        .apply { token?.let { addHeader("Authorization", "Bearer $it") } }
-                                        .crossfade(true)
-                                        .build(),
-                                    contentDescription = "Photo de profil",
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.Crop
-                                )
-                            } else {
-                                Icon(
-                                    Icons.Rounded.Person,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(80.dp),
-                                    tint = AppColors.BrandBlue.copy(alpha = 0.5f)
-                                )
-                            }
-                        }
-                        
-                        Spacer(Modifier.height(32.dp))
-                        
-                        // QR Code géant pour le scan
-                        Surface(
-                            modifier = Modifier
-                                .size(240.dp)
-                                .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), RoundedCornerShape(20.dp))
-                                .padding(16.dp),
-                            color = Color.White,
-                            shape = RoundedCornerShape(20.dp)
-                        ) {
-                             AsyncImage(
-                                model = ImageRequest.Builder(LocalContext.current)
-                                    .data(ApiConfig.getQrCodeUrl(adherent.matricule.orEmpty()))
-                                    .apply { token?.let { addHeader("Authorization", "Bearer $it") } }
-                                    .build(),
-                                contentDescription = "QR Code de scan",
-                                modifier = Modifier.fillMaxSize()
-                            )
-                        }
-                        
-                        Spacer(Modifier.height(32.dp))
-                        
-                        // Informations Identité
-                        Text(
-                            text = "${adherent.prenoms} ${adherent.nom}",
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Black,
-                            textAlign = TextAlign.Center,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        
-                        Surface(
-                            modifier = Modifier.padding(top = 12.dp),
-                            color = AppColors.BrandBlue.copy(alpha = 0.1f),
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Text(
-                                text = adherent.matricule ?: "SANS MATRICULE",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = AppColors.BrandBlue,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
-                            )
-                        }
-                        
-                        Spacer(Modifier.height(32.dp))
-                        
-                        HorizontalDivider(
-                            modifier = Modifier.fillMaxWidth(),
-                            thickness = 0.5.dp,
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                        )
-                        
-                        Spacer(Modifier.height(24.dp))
-                        
-                        // Détails techniques
-                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            CardInfoRow("Date de Naissance", adherent.dateNaissance ?: "-")
-                            CardInfoRow("Sexe", adherent.sexe ?: "-")
-                            CardInfoRow("Régime", adherent.regime ?: "-")
-                            CardInfoRow("Statut", "ACTIF", AppColors.StatusGreen)
-                        }
-                    }
-                }
-                
-                Spacer(Modifier.height(40.dp))
-                
-                Text(
-                    "Cette carte est strictement personnelle.\nEn cas d'urgence, présentez ce code au personnel médical.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                    lineHeight = 18.sp,
-                    modifier = Modifier.padding(bottom = 32.dp)
+                // HEADER FIXE
+                DashboardHeader(
+                    adherent = adherent,
+                    onProfileClick = onProfileClick,
+                    token = token
                 )
             }
         }
+
+        // Suppression de FullScreenCardOverlay car remplacé par DigitalCardScreen
     }
 }
 
@@ -489,44 +293,44 @@ private fun StatMiniCard(
     color: Color
 ) {
     Surface(
-        modifier = modifier
-            .shadow(2.dp, RoundedCornerShape(16.dp), clip = false),
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+        modifier = modifier,
+        shape = RoundedCornerShape(18.dp),
+        color = Color.White,
+        shadowElevation = 4.dp,
+        border = BorderStroke(0.5.dp, color.copy(alpha = 0.1f))
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 12.dp, horizontal = 8.dp),
+                .padding(vertical = 16.dp, horizontal = 10.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Box(
                 modifier = Modifier
-                    .size(40.dp)
-                    .background(color.copy(alpha = 0.12f), CircleShape),
+                    .size(44.dp)
+                    .background(
+                        Brush.radialGradient(
+                            listOf(color.copy(alpha = 0.15f), color.copy(alpha = 0.05f))
+                        ),
+                        CircleShape
+                    ),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    icon,
-                    contentDescription = null,
-                    tint = color,
-                    modifier = Modifier.size(20.dp)
-                )
+                Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(22.dp))
             }
             Text(
                 value,
                 fontWeight = FontWeight.Black,
-                fontSize = 16.sp,
-                color = MaterialTheme.colorScheme.onSurface,
+                fontSize = 17.sp,
+                color = AppColors.TextMain,
                 maxLines = 1
             )
             Text(
                 label,
                 fontSize = 11.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontWeight = FontWeight.Medium,
+                color = AppColors.TextSub,
+                fontWeight = FontWeight.SemiBold,
                 maxLines = 1
             )
         }
@@ -551,10 +355,14 @@ private fun CoverageStatusCard(adherent: AdherentDto) {
             val totalDays = java.time.temporal.ChronoUnit.DAYS.between(created, end).toFloat()
             val elapsedDays = java.time.temporal.ChronoUnit.DAYS.between(created, now).toFloat()
             (elapsedDays / totalDays).coerceIn(0f, 1f)
-        } catch (e: Exception) {
-            0.1f
-        }
+        } catch (e: Exception) { 0.1f }
     }
+
+    val animatedProgress by animateFloatAsState(
+        targetValue = progress,
+        animationSpec = tween(1200, easing = FastOutSlowInEasing),
+        label = "coverage_progress"
+    )
 
     val progressColor = when {
         progress >= 0.85f -> AppColors.StatusRed
@@ -562,59 +370,63 @@ private fun CoverageStatusCard(adherent: AdherentDto) {
         else -> AppColors.StatusGreen
     }
 
+    val remainingDays = remember(adherent.createdAt) {
+        try {
+            val created = java.time.LocalDateTime.parse(adherent.createdAt)
+            val end = created.plusYears(1)
+            val now = java.time.LocalDateTime.now()
+            java.time.temporal.ChronoUnit.DAYS.between(now, end).coerceAtLeast(0)
+        } catch (e: Exception) { 0L }
+    }
+
     Surface(
         modifier = Modifier
             .padding(horizontal = 16.dp, vertical = 8.dp)
-            .fillMaxWidth()
-            .shadow(4.dp, RoundedCornerShape(20.dp), clip = true),
-        shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+            .fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        color = Color.White,
+        shadowElevation = 6.dp
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Surface(
-                    modifier = Modifier.size(48.dp),
-                    shape = CircleShape,
-                    color = if (isActive) AppColors.StatusGreen.copy(0.12f) else AppColors.StatusRed.copy(0.12f)
+                // Icône avec gradient de fond
+                Box(
+                    modifier = Modifier
+                        .size(52.dp)
+                        .background(
+                            Brush.linearGradient(
+                                if (isActive) listOf(AppColors.StatusGreen.copy(0.2f), AppColors.StatusGreen.copy(0.05f))
+                                else listOf(AppColors.StatusRed.copy(0.2f), AppColors.StatusRed.copy(0.05f))
+                            ),
+                            RoundedCornerShape(16.dp)
+                        ),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            if (isActive) Icons.Rounded.Shield else Icons.Rounded.Warning,
-                            contentDescription = null,
-                            tint = if (isActive) AppColors.StatusGreen else AppColors.StatusRed,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
+                    Icon(
+                        if (isActive) Icons.Rounded.Shield else Icons.Rounded.Warning,
+                        contentDescription = null,
+                        tint = if (isActive) AppColors.StatusGreen else AppColors.StatusRed,
+                        modifier = Modifier.size(26.dp)
+                    )
                 }
                 Spacer(Modifier.width(16.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        "Validité de la couverture",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        coveragePeriod,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
+                    Text("Validité de la couverture", fontSize = 12.sp, fontWeight = FontWeight.Medium, color = AppColors.TextSub)
+                    Text(coveragePeriod, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = AppColors.TextMain)
                 }
+                // Badge statut avec gradient
                 Surface(
                     shape = RoundedCornerShape(20.dp),
                     color = if (isActive) AppColors.StatusGreen.copy(0.12f) else AppColors.StatusRed.copy(0.12f)
                 ) {
                     Text(
                         if (isActive) "ACTIF" else "INACTIF",
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Black,
-                        letterSpacing = 0.5.sp,
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp),
+                        fontSize = 11.sp, fontWeight = FontWeight.Black,
+                        letterSpacing = 0.8.sp,
                         color = if (isActive) AppColors.StatusGreen else AppColors.StatusRed
                     )
                 }
@@ -622,43 +434,36 @@ private fun CoverageStatusCard(adherent: AdherentDto) {
 
             Spacer(Modifier.height(20.dp))
 
+            // Barre de progression animée
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    "Progression du contrat",
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    "${(progress * 100).toInt()}%",
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Black,
-                    color = progressColor
-                )
+                Text("Progression", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = AppColors.TextSub)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("${(progress * 100).toInt()}%", fontSize = 15.sp, fontWeight = FontWeight.Black, color = progressColor)
+                    if (remainingDays > 0) {
+                        Spacer(Modifier.width(8.dp))
+                        Surface(shape = RoundedCornerShape(6.dp), color = progressColor.copy(alpha = 0.1f)) {
+                            Text(
+                                "${remainingDays}j restants",
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                                fontSize = 10.sp, fontWeight = FontWeight.Bold, color = progressColor
+                            )
+                        }
+                    }
+                }
             }
 
             Spacer(Modifier.height(10.dp))
 
             LinearProgressIndicator(
-                progress = progress,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(8.dp)
-                    .clip(RoundedCornerShape(4.dp)),
+                progress = animatedProgress,
+                modifier = Modifier.fillMaxWidth().height(10.dp).clip(RoundedCornerShape(5.dp)),
                 color = progressColor,
-                trackColor = progressColor.copy(alpha = 0.15f),
+                trackColor = progressColor.copy(alpha = 0.1f),
                 strokeCap = StrokeCap.Round
-            )
-
-            Spacer(Modifier.height(8.dp))
-            Text(
-                "Cette carte est valable 1 an à compter de sa date d'émission.",
-                fontSize = 10.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
             )
         }
     }
@@ -1033,95 +838,150 @@ private fun DashboardHeader(
     token: String?
 ) {
     val context = LocalContext.current
-    
-    Row(
+
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 20.dp)
-            .statusBarsPadding(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+            .background(
+                Brush.verticalGradient(
+                    listOf(AppColors.BrandBlueDark, AppColors.BrandBlue, AppColors.BrandBlue.copy(alpha = 0.6f), Color.Transparent)
+                )
+            )
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            // Avatar avec gradient et ombre
-            Surface(
-                modifier = Modifier
-                    .size(52.dp)
-                    .clickable { onProfileClick() }
-                    .shadow(4.dp, CircleShape),
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.surface
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    if (adherent.photo != null) {
-                        AsyncImage(
-                            model = ImageRequest.Builder(context)
-                                .data(ApiConfig.getImageUrl(adherent.photo))
-                                .apply { token?.let { addHeader("Authorization", "Bearer $it") } }
-                                .crossfade(true)
-                                .build(),
-                            contentDescription = "Profil",
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .clip(CircleShape),
-                            contentScale = ContentScale.Crop
-                        )
-                    } else {
-                        Icon(
-                            Icons.Rounded.Person,
-                            contentDescription = null,
-                            tint = AppColors.BrandBlue,
-                            modifier = Modifier.size(26.dp)
-                        )
+        // Cercles décoratifs subtils
+        Box(
+            modifier = Modifier.size(140.dp).align(Alignment.TopEnd)
+                .offset(x = 40.dp, y = (-20).dp)
+                .clip(CircleShape).background(Color.White.copy(alpha = 0.04f))
+        )
+        Box(
+            modifier = Modifier.size(80.dp).align(Alignment.CenterStart)
+                .offset(x = (-20).dp)
+                .clip(CircleShape).background(Color.White.copy(alpha = 0.03f))
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 24.dp)
+                .statusBarsPadding(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(
+                    modifier = Modifier.size(56.dp).clickable { onProfileClick() },
+                    shape = CircleShape,
+                    color = Color.White,
+                    border = BorderStroke(2.dp, Color.White.copy(alpha = 0.4f)),
+                    shadowElevation = 8.dp
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        if (adherent.photo != null) {
+                            AsyncImage(
+                                model = ImageRequest.Builder(context)
+                                    .data(ApiConfig.getImageUrl(adherent.photo))
+                                    .apply { token?.let { addHeader("Authorization", "Bearer $it") } }
+                                    .crossfade(true).build(),
+                                contentDescription = "Profil",
+                                modifier = Modifier.fillMaxSize().clip(CircleShape),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            val initials = "${adherent.prenoms?.firstOrNull()?.uppercase() ?: ""}${adherent.nom?.firstOrNull()?.uppercase() ?: ""}"
+                            Text(initials.ifEmpty { "?" }, fontWeight = FontWeight.Black, fontSize = 20.sp, color = AppColors.BrandBlue)
+                        }
                     }
                 }
+                Spacer(Modifier.width(16.dp))
+                Column {
+                    Text("Bonjour,", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.8f))
+                    Text(
+                        adherent.prenoms?.split(" ")?.firstOrNull() ?: "Utilisateur",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Black, color = Color.White,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
-            
-            Spacer(Modifier.width(14.dp))
-            
-            Column {
-                Text(
-                    text = "Bonjour,",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    text = adherent.prenoms?.split(" ")?.firstOrNull() ?: "Utilisateur",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Black,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+            IconButton(
+                onClick = {},
+                modifier = Modifier.size(46.dp).background(Color.White.copy(alpha = 0.15f), CircleShape)
+            ) {
+                Icon(Icons.Rounded.Notifications, "Notifications", tint = Color.White, modifier = Modifier.size(24.dp))
             }
         }
-        
-        // Actions rapides (Notifications)
-        Box {
-            IconButton(
-                onClick = { /* TODO: Notifications */ },
-                modifier = Modifier
-                    .size(44.dp)
-                    .background(MaterialTheme.colorScheme.surface, CircleShape)
-                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), CircleShape)
-            ) {
-                Icon(
-                    Icons.Rounded.Notifications,
-                    contentDescription = "Notifications",
-                    tint = AppColors.BrandBlue,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
-            // Badge de notification (simulé)
-            Surface(
-                modifier = Modifier
-                    .size(10.dp)
-                    .align(Alignment.TopEnd)
-                    .padding(top = 2.dp, end = 2.dp),
-                shape = CircleShape,
+    }
+}
+
+// ─────────────────────────────────────────────
+// ACTIONS RAPIDES
+// ─────────────────────────────────────────────
+
+@Composable
+private fun QuickActionsRow(
+    onRenew: () -> Unit = {},
+    onHistory: () -> Unit = {},
+    onAssistance: () -> Unit = {}
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(top = 12.dp, bottom = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        QuickActionChip(Modifier.weight(1f), Icons.Rounded.Autorenew, "Renouveler", AppColors.StatusGreen, onRenew)
+        QuickActionChip(Modifier.weight(1f), Icons.Rounded.History, "Historique", AppColors.BrandBlue, onHistory)
+        QuickActionChip(Modifier.weight(1f), Icons.Rounded.SupportAgent, "Assistance", AppColors.GoldAccent, onAssistance)
+    }
+}
+
+@Composable
+private fun QuickActionChip(
+    modifier: Modifier, icon: ImageVector, label: String, color: Color, onClick: () -> Unit
+) {
+    Surface(
+        onClick = onClick,
+        modifier = modifier,
+        shape = RoundedCornerShape(14.dp),
+        color = color.copy(alpha = 0.08f),
+        border = BorderStroke(0.5.dp, color.copy(alpha = 0.15f))
+    ) {
+        Column(
+            modifier = Modifier.padding(vertical = 14.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Icon(icon, null, tint = color, modifier = Modifier.size(22.dp))
+            Text(label, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = color)
+        }
+    }
+}
+
+@Composable
+private fun DashboardErrorCard(error: String) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        shape = AppShapes.MediumRadius,
+        color = AppColors.StatusRed.copy(alpha = 0.08f),
+        border = BorderStroke(0.5.dp, AppColors.StatusRed.copy(alpha = 0.2f))
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                Icons.Rounded.ErrorOutline,
+                contentDescription = null,
+                tint = AppColors.StatusRed,
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(Modifier.width(12.dp))
+            Text(
+                error,
                 color = AppColors.StatusRed,
-                border = BorderStroke(1.5.dp, Color.White)
-            ) {}
+                fontSize = 14.sp,
+                lineHeight = 20.sp
+            )
         }
     }
 }

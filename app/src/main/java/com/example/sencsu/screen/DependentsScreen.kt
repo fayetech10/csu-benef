@@ -3,6 +3,7 @@ package com.example.sencsu.screen
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -10,6 +11,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,6 +40,7 @@ import kotlinx.coroutines.delay
 @Composable
 fun DependentsScreen(
     onNavigateToHistory: (String, String, String) -> Unit = { _, _, _ -> },
+    onNavigateToDetails: (String, String) -> Unit = { _, _ -> },
     viewModel: BeneficiaryDashboardViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -110,7 +114,7 @@ fun DependentsScreen(
                 // Liste des personnes en charge
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(16.dp),
+                    contentPadding = PaddingValues(top = 16.dp, start = 16.dp, end = 16.dp, bottom = 120.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     // En-tête résumé
@@ -144,6 +148,13 @@ fun DependentsScreen(
                                         pc.id?.let { pcId ->
                                             val fullName = "${pc.prenoms ?: ""} ${pc.nom ?: ""}".trim()
                                             onNavigateToHistory(adherentId, pcId, fullName)
+                                        }
+                                    }
+                                },
+                                onClick = {
+                                    adherent?.id?.let { adherentId ->
+                                        pc.id?.let { pcId ->
+                                            onNavigateToDetails(adherentId, pcId)
                                         }
                                     }
                                 },
@@ -271,6 +282,7 @@ private fun DependentDetailCard(
     onEdit: () -> Unit,
     onDelete: () -> Unit,
     onMedicalHistory: () -> Unit,
+    onClick: () -> Unit,
     token: String?,
     context: android.content.Context
 ) {
@@ -281,88 +293,106 @@ private fun DependentDetailCard(
         .joinToString("")
 
     Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = AppShapes.MediumRadius,
+        modifier = Modifier.fillMaxWidth().clickable { onClick() },
+        shape = RoundedCornerShape(20.dp),
         color = Color.White,
-        shadowElevation = 2.dp
+        shadowElevation = 2.dp,
+        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.5f))
     ) {
-        Column {
-            Row(
-                modifier = Modifier.padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 // Avatar avec initiales
                 Surface(
-                    modifier = Modifier.size(52.dp),
+                    modifier = Modifier.size(56.dp),
                     shape = CircleShape,
-                    color = AppColors.BrandBlue.copy(alpha = 0.08f),
-                    border = androidx.compose.foundation.BorderStroke(
-                        1.dp, AppColors.BrandBlue.copy(alpha = 0.15f)
-                    )
+                    color = AppColors.BrandBlue.copy(alpha = 0.05f),
+                    border = BorderStroke(1.dp, AppColors.BrandBlue.copy(alpha = 0.1f))
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Text(
                             initials,
                             fontWeight = FontWeight.Black,
-                            fontSize = 18.sp,
+                            fontSize = 20.sp,
                             color = AppColors.BrandBlue
                         )
                     }
                 }
 
-                Spacer(Modifier.width(14.dp))
+                Spacer(Modifier.width(16.dp))
 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         name,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 17.sp,
                         color = AppColors.TextMain
                     )
+                    Spacer(Modifier.height(4.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Surface(
-                            shape = AppShapes.ExtraSmallRadius,
-                            color = AppColors.GoldAccent.copy(alpha = 0.1f)
+                            shape = RoundedCornerShape(6.dp),
+                            color = AppColors.GoldAccent.copy(alpha = 0.12f)
                         ) {
                             Text(
-                                pc.lienParent?.uppercase() ?: "CHARGE",
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                pc.lienParent?.uppercase() ?: "DÉPENDANT",
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Black,
-                                color = AppColors.GoldAccent
+                                color = AppColors.GoldAccent,
+                                letterSpacing = 0.5.sp
+                            )
+                        }
+                        if (pc.matricule != null) {
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                "#${pc.matricule}",
+                                fontSize = 11.sp,
+                                color = AppColors.TextSub,
+                                fontWeight = FontWeight.Medium
                             )
                         }
                     }
                 }
 
-                // Actions
-                Row {
-                    IconButton(onClick = onMedicalHistory) {
-                        Icon(Icons.Rounded.MedicalServices, null, tint = AppColors.BrandBlue, modifier = Modifier.size(20.dp))
+                // Mini Menu
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(
+                        onClick = onMedicalHistory,
+                        modifier = Modifier.size(36.dp).background(AppColors.BrandBlue.copy(0.05f), CircleShape)
+                    ) {
+                        Icon(Icons.Rounded.MedicalServices, null, tint = AppColors.BrandBlue, modifier = Modifier.size(18.dp))
                     }
-                    IconButton(onClick = onEdit) {
-                        Icon(Icons.Rounded.Edit, null, tint = AppColors.BrandBlue, modifier = Modifier.size(20.dp))
-                    }
-                    IconButton(onClick = onDelete) {
-                        Icon(Icons.Rounded.Delete, null, tint = AppColors.StatusRed, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(6.dp))
+                    IconButton(
+                        onClick = onEdit,
+                        modifier = Modifier.size(36.dp).background(AppColors.BrandBlue.copy(0.05f), CircleShape)
+                    ) {
+                        Icon(Icons.Rounded.Edit, null, tint = AppColors.BrandBlue, modifier = Modifier.size(18.dp))
                     }
                 }
             }
 
-            // QR Code (petit)
             if (pc.matricule != null) {
-                HorizontalDivider(color = AppColors.BorderColorLight, modifier = Modifier.padding(horizontal = 16.dp))
+                Spacer(Modifier.height(12.dp))
+                HorizontalDivider(color = Color.LightGray.copy(alpha = 0.3f))
+                Spacer(Modifier.height(12.dp))
+                
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                    modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Matricule: ${pc.matricule}", fontSize = 11.sp, color = AppColors.BrandBlue)
+                    Column {
+                        Text("Accès rapide aux soins", fontSize = 11.sp, color = AppColors.TextSub, fontWeight = FontWeight.Medium)
+                        Text("Présentez ce code QR", fontSize = 10.sp, color = AppColors.TextSub.copy(alpha = 0.6f))
+                    }
+                    
                     Surface(
-                        modifier = Modifier.size(32.dp),
-                        shape = AppShapes.SmallRadius,
+                        modifier = Modifier.size(44.dp),
+                        shape = RoundedCornerShape(8.dp),
                         color = Color.White,
-                        border = androidx.compose.foundation.BorderStroke(0.5.dp, AppColors.BorderColor)
+                        border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.2f)),
+                        shadowElevation = 1.dp
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             SubcomposeAsyncImage(
@@ -371,8 +401,8 @@ private fun DependentDetailCard(
                                     .apply { token?.let { addHeader("Authorization", "Bearer $it") } }
                                     .build(),
                                 contentDescription = "QR",
-                                modifier = Modifier.padding(2.dp),
-                                loading = { CircularProgressIndicator(modifier = Modifier.size(8.dp), strokeWidth = 1.dp) }
+                                modifier = Modifier.padding(4.dp),
+                                loading = { CircularProgressIndicator(modifier = Modifier.size(12.dp), strokeWidth = 1.5.dp, color = AppColors.BrandBlue) }
                             )
                         }
                     }
