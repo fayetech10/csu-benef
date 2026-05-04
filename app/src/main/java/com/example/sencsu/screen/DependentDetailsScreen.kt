@@ -32,8 +32,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
-import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
+import com.example.sencsu.components.QrCodeImage
 import com.example.sencsu.configs.ApiConfig
 import com.example.sencsu.data.remote.dto.PersonneChargeDto
 import com.example.sencsu.domain.viewmodel.BeneficiaryDashboardViewModel
@@ -249,12 +249,8 @@ private fun DependentIdentitySection(pc: PersonneChargeDto, token: String?, onCl
                                 shape = RoundedCornerShape(8.dp),
                                 color = Color.White
                             ) {
-                                SubcomposeAsyncImage(
-                                    model = ImageRequest.Builder(context)
-                                        .data(ApiConfig.getQrCodeUrl(pc.matricule))
-                                        .apply { token?.let { addHeader("Authorization", "Bearer $it") } }
-                                        .build(),
-                                    contentDescription = "QR",
+                                QrCodeImage(
+                                    value = pc.matricule,
                                     modifier = Modifier.padding(4.dp)
                                 )
                             }

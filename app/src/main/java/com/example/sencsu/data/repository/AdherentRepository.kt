@@ -2,6 +2,7 @@ package com.example.sencsu.data.repository
 
 import com.example.sencsu.data.remote.ApiService
 import com.example.sencsu.data.remote.dto.AdherentDto
+import com.example.sencsu.data.remote.dto.AdherentUpdateDto
 import com.example.sencsu.data.remote.dto.PersonneChargeDto
 import com.example.sencsu.domain.repository.IAdherentRepository
 import javax.inject.Inject
@@ -47,6 +48,24 @@ class AdherentRepository @Inject constructor(
         personne: PersonneChargeDto
     ): Result<PersonneChargeDto> = safeApiCall {
         apiService.updatePersonneCharge(adherentId, pcId, personne)
+    }
+
+    override suspend fun updateAdherent(id: String, adherent: AdherentUpdateDto): Result<AdherentUpdateDto> = safeApiCall {
+        apiService.updateAdherent(id, adherent).data
+    }
+
+    override suspend fun updatePassword(id: String, oldPassword: String, password: String): Result<Unit> = safeApiCall {
+        val response = apiService.updatePassword(
+            id,
+            mapOf(
+                "old_password" to oldPassword,
+                "password" to password
+            )
+        )
+        if (!response.isSuccessful) {
+            throw Exception("Erreur serveur (${response.code()})")
+        }
+        Unit
     }
 
     override suspend fun scanAdherent(matricule: String): Result<AdherentDto> = safeApiCall {

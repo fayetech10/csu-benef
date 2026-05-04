@@ -18,6 +18,7 @@ import com.example.sencsu.models.RedBg
 import com.example.sencsu.models.RedText
 import com.example.sencsu.models.StatItem
 import com.example.sencsu.theme.AppColors
+import com.example.sencsu.theme.AppElevation
 import com.example.sencsu.theme.AppShapes
 
 @Composable
@@ -25,9 +26,9 @@ fun StatCard(item: StatItem, modifier: Modifier = Modifier) {
     Card(
         modifier = modifier,
         colors = CardDefaults.cardColors(containerColor = AppColors.SurfaceBackground),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp), // Flat look
-        shape = AppShapes.MediumRadius,
-        border = androidx.compose.foundation.BorderStroke(1.dp, AppColors.BorderColor)
+        elevation = CardDefaults.cardElevation(defaultElevation = AppElevation.card),
+        shape = AppShapes.LargeRadius,
+        border = androidx.compose.foundation.BorderStroke(1.dp, AppColors.BorderColorLight)
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -43,8 +44,8 @@ fun StatCard(item: StatItem, modifier: Modifier = Modifier) {
                 Box(
                     modifier = Modifier
                         .size(40.dp)
-                        .clip(AppShapes.ExtraSmallRadius)
-                        .background(item.themeColor.copy(alpha = 0.1f)), // Softer background
+                        .clip(AppShapes.SmallRadius)
+                        .background(item.themeColor.copy(alpha = 0.12f)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -57,7 +58,7 @@ fun StatCard(item: StatItem, modifier: Modifier = Modifier) {
 
                 // Badge (Trend)
                 // Using AppColors for trend if feasible, otherwise keeping model colors but using AppShapes
-                val badgeBg = if (item.isAlert) AppColors.StatusRed.copy(alpha=0.1f) else AppColors.StatusGreen.copy(alpha=0.1f)
+                val badgeBg = if (item.isAlert) AppColors.StatusRedSoft else AppColors.StatusGreenSoft
                 val badgeText = if (item.isAlert) AppColors.StatusRed else AppColors.StatusGreen
 
                 Box(
@@ -79,13 +80,13 @@ fun StatCard(item: StatItem, modifier: Modifier = Modifier) {
             Column {
                 Text(
                     text = item.value,
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Black,
                     color = AppColors.TextMain
                 )
                 Text(
                     text = item.title,
-                    fontSize = 14.sp,
+                    style = MaterialTheme.typography.bodySmall,
                     color = AppColors.TextSub
                 )
             }
@@ -98,8 +99,9 @@ fun ActivityRow(activity: ActivityItem) {
     Card(
         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
         colors = CardDefaults.cardColors(containerColor = AppColors.SurfaceBackground),
-        shape = AppShapes.MediumRadius,
-        border = androidx.compose.foundation.BorderStroke(1.dp, AppColors.BorderColor.copy(alpha=0.5f))
+        elevation = CardDefaults.cardElevation(defaultElevation = AppElevation.card),
+        shape = AppShapes.LargeRadius,
+        border = androidx.compose.foundation.BorderStroke(1.dp, AppColors.BorderColorLight)
     ) {
         Row(
             modifier = Modifier.padding(12.dp),
@@ -110,7 +112,7 @@ fun ActivityRow(activity: ActivityItem) {
                 modifier = Modifier
                     .size(48.dp)
                     .clip(AppShapes.CircleRadius)
-                    .background(AppColors.SurfaceAlt)
+                    .background(AppColors.BrandBlueLite)
             )
 
             Spacer(modifier = Modifier.width(12.dp))

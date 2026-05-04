@@ -86,7 +86,7 @@ fun LoginScreen(
                     .align(Alignment.TopCenter)
                     .background(
                         Brush.verticalGradient(
-                            listOf(AppColors.BrandBlue, AppColors.AppBackground)
+                            listOf(AppColors.BrandBlue, AppColors.BrandBlueLite, AppColors.AppBackground)
                         )
                     )
             )
@@ -106,7 +106,7 @@ fun LoginScreen(
                         Surface(
                             modifier = Modifier.size(80.dp),
                             shape = AppShapes.MediumRadius,
-                            color = Color.White,
+                            color = AppColors.SurfaceBackground,
                             shadowElevation = 8.dp
                         ) {
                             Box(contentAlignment = Alignment.Center) {
@@ -138,8 +138,9 @@ fun LoginScreen(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = AppShapes.LargeRadius,
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 12.dp)
+                    colors = CardDefaults.cardColors(containerColor = AppColors.SurfaceBackground),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, AppColors.BorderColorLight)
                 ) {
                     Column(
                         modifier = Modifier.padding(24.dp),
@@ -338,7 +339,9 @@ fun AuthTextField(
             focusedBorderColor = AppColors.BrandBlue,
             unfocusedBorderColor = AppColors.BorderColor,
             focusedLabelColor = AppColors.BrandBlue,
-            cursorColor = AppColors.BrandBlue
+            cursorColor = AppColors.BrandBlue,
+            focusedContainerColor = AppColors.SurfaceMuted,
+            unfocusedContainerColor = AppColors.SurfaceMuted
         )
     )
 }

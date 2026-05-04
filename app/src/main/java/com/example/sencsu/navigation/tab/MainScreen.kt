@@ -104,19 +104,19 @@ fun SubscriberBottomNavigation(
 
     Surface(
         modifier = Modifier
-            .padding(horizontal = 24.dp, vertical = 20.dp)
-            .height(72.dp)
-            .shadow(24.dp, CircleShape, ambientColor = AppColors.BrandBlue.copy(alpha = 0.2f), spotColor = AppColors.BrandBlue.copy(alpha = 0.3f)),
+            .padding(horizontal = 20.dp, vertical = 16.dp)
+            .height(68.dp)
+            .shadow(14.dp, CircleShape, ambientColor = AppColors.BrandBlue.copy(alpha = 0.12f), spotColor = AppColors.BrandBlue.copy(alpha = 0.16f)),
         shape = CircleShape,
-        color = Color.Transparent, // Let the background modifier handle it
-        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.4f))
+        color = Color.Transparent,
+        border = BorderStroke(1.dp, AppColors.BorderColorLight)
     ) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(
                     Brush.verticalGradient(
-                        listOf(Color.White, Color.White.copy(alpha = 0.85f))
+                        listOf(AppColors.SurfaceBackground, AppColors.SurfaceMuted)
                     )
                 )
         ) {
@@ -157,7 +157,7 @@ fun SubscriberBottomNavigation(
                                     modifier = Modifier
                                         .size(42.dp)
                                         .background(
-                                            AppColors.BrandBlue.copy(alpha = 0.1f),
+                                            AppColors.BrandBlueLite,
                                             CircleShape
                                         )
                                 )
@@ -165,7 +165,7 @@ fun SubscriberBottomNavigation(
                             Icon(
                                 imageVector = if (isSelected) item.icon else item.iconOutlined,
                                 contentDescription = item.label,
-                                tint = if (isSelected) AppColors.BrandBlue else AppColors.TextSub.copy(alpha = 0.6f),
+                                tint = if (isSelected) AppColors.BrandBlue else AppColors.TextSub,
                                 modifier = Modifier
                                     .size(24.dp)
                                     .scale(iconScale)

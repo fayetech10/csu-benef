@@ -51,6 +51,7 @@ import com.example.sencsu.data.remote.dto.PersonneChargeDto
 import com.example.sencsu.domain.viewmodel.OcrStep
 import com.example.sencsu.domain.viewmodel.OcrViewModel
 import com.example.sencsu.theme.AppColors
+import com.example.sencsu.theme.AppGradients
 import com.example.sencsu.theme.AppShapes
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -105,7 +106,7 @@ fun AddAdherentScreen(
     }
 
     Scaffold(
-        containerColor = Color(0xFFF8FAFC),
+        containerColor = AppColors.AppBackground,
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             if (screenState == ScreenState.FormMode) {
@@ -270,7 +271,7 @@ fun AddAdherentScreen(
                     ModalBottomSheet(
                         sheetState = sheetState,
                         onDismissRequest = { viewModel.hideModal() },
-                        containerColor = Color.White
+                        containerColor = AppColors.SurfaceBackground
                     ) {
                         Box(modifier = Modifier.fillMaxSize()) {
                             AddDependantModalContent(
@@ -325,7 +326,7 @@ fun OcrModeChoiceScreen(
             .fillMaxSize()
             .background(
                 Brush.verticalGradient(
-                    listOf(Color(0xFFF8FAFC), Color(0xFFEFF6FF))
+                    AppGradients.BrandSoft
                 )
             )
     ) {
@@ -376,7 +377,7 @@ fun OcrModeChoiceScreen(
                 text = "Ajouter un adhérent",
                 style = MaterialTheme.typography.headlineMedium.copy(
                     fontWeight = FontWeight.Black,
-                    letterSpacing = (-0.5).sp
+                    letterSpacing = 0.sp
                 ),
                 color = AppColors.TextMain
             )
@@ -402,7 +403,7 @@ fun OcrModeChoiceScreen(
                     description = "Extraction rapide via photo",
                     icon = Icons.Default.CameraAlt,
                     accentColor = AppColors.BrandBlue,
-                    bgColor = Color(0xFFEEF2FF),
+                    bgColor = AppColors.ActionBlueSoft,
                     onClick = onChooseOcr,
                     tag = "2 min",
                     isRecommended = true
@@ -602,7 +603,7 @@ fun ModernHeader(
                 }
                 Spacer(modifier = Modifier.width(16.dp))
                 Column {
-                    Text(title, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp, color = AppColors.TextMain, letterSpacing = (-0.5).sp)
+                    Text(title, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp, color = AppColors.TextMain, letterSpacing = 0.sp)
                     Text("Étape ${currentStep + 1} sur $totalSteps", fontSize = 12.sp, color = AppColors.TextSub, fontWeight = FontWeight.Medium)
                 }
             }
@@ -1034,7 +1035,7 @@ private fun SummaryCard(title: String, icon: ImageVector, content: @Composable C
         modifier = Modifier
             .fillMaxWidth()
             .padding(bottom = 12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = AppColors.SurfaceBackground),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.5.dp),
         border = BorderStroke(1.dp, AppColors.BorderColor.copy(alpha = 0.5f))
     ) {

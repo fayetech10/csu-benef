@@ -54,6 +54,8 @@ import androidx.navigation.NavController
 import com.example.sencsu.data.remote.dto.AdherentDto
 import com.example.sencsu.domain.viewmodel.DashboardViewModel
 import com.example.sencsu.theme.AppColors
+import com.example.sencsu.theme.AppElevation
+import com.example.sencsu.theme.AppGradients
 import com.example.sencsu.theme.AppShapes
 import com.example.sencsu.navigation.Screen
 import androidx.compose.material.icons.rounded.QrCode
@@ -187,7 +189,7 @@ private fun DashboardHeader(
             .fillMaxWidth()
             .background(
                 Brush.verticalGradient(
-                    listOf(AppColors.BrandBlue, AppColors.BrandBlueDark)
+                    AppGradients.Brand
                 )
             )
             .padding(horizontal = 20.dp, vertical = 24.dp)
@@ -392,8 +394,10 @@ private fun SummaryCard(
     Surface(
         modifier = modifier,
         shape = AppShapes.LargeRadius,
-        color = Color.White,
-        shadowElevation = 2.dp
+        color = AppColors.SurfaceBackground,
+        tonalElevation = AppElevation.card,
+        shadowElevation = AppElevation.card,
+        border = BorderStroke(1.dp, AppColors.BorderColorLight)
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -438,8 +442,10 @@ private fun AdherentRow(adherent: AdherentDto) {
             .fillMaxWidth()
             .clickable { },
         shape = AppShapes.LargeRadius,
-        color = Color.White,
-        shadowElevation = 1.dp
+        color = AppColors.SurfaceBackground,
+        tonalElevation = AppElevation.card,
+        shadowElevation = AppElevation.card,
+        border = BorderStroke(1.dp, AppColors.BorderColorLight)
     ) {
         Row(
             modifier = Modifier.padding(14.dp),

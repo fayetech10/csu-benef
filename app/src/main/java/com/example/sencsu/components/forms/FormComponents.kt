@@ -80,6 +80,8 @@ import coil.compose.AsyncImage
 import coil.compose.SubcomposeAsyncImage
 import com.example.sencsu.data.remote.dto.FormConstants
 import com.example.sencsu.theme.AppColors
+import com.example.sencsu.theme.AppElevation
+import com.example.sencsu.theme.AppShapes
 import com.example.sencsu.data.remote.dto.PersonneChargeDto
 import java.io.File
 import java.text.SimpleDateFormat
@@ -98,11 +100,12 @@ fun FormSection(
         modifier = modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = AppElevation.cardRaised),
         colors = CardDefaults.cardColors(
-            containerColor = Color.White
+            containerColor = AppColors.SurfaceBackground
         ),
-        shape = RoundedCornerShape(16.dp)
+        shape = AppShapes.LargeRadius,
+        border = BorderStroke(1.dp, AppColors.BorderColorLight)
     ) {
         Column(
             modifier = Modifier.padding(18.dp)
@@ -152,13 +155,8 @@ fun DatePickerField(
                 value = value,
                 onValueChange = {},
                 readOnly = true,
-                label = {
-                    Text(
-                        text = label,
-                        color = AppColors.TextMain
-                    )
-                },
-                placeholder = { Text("JJ/MM/AAAA") },
+                label = { Text(text = label) },
+                placeholder = { Text("JJ/MM/AAAA", color = AppColors.TextDisabled) },
                 isError = isError,
                 modifier = Modifier.fillMaxWidth(),
                 trailingIcon = {
@@ -168,11 +166,15 @@ fun DatePickerField(
                         tint = if (isError) AppColors.StatusRed else AppColors.BrandBlue
                     )
                 },
+                shape = AppShapes.MediumRadius,
                 colors = TextFieldDefaults.colors(
-                    focusedContainerColor = Color.Transparent,
-                    unfocusedContainerColor = Color.Transparent,
+                    focusedContainerColor = AppColors.SurfaceMuted,
+                    unfocusedContainerColor = AppColors.SurfaceMuted,
+                    errorContainerColor = AppColors.StatusRedSoft,
                     focusedIndicatorColor = if (isError) AppColors.StatusRed else AppColors.BrandBlue,
-                    unfocusedIndicatorColor = if (isError) AppColors.StatusRed else AppColors.BorderColor
+                    unfocusedIndicatorColor = if (isError) AppColors.StatusRed else AppColors.BorderColor,
+                    errorIndicatorColor = AppColors.StatusRed,
+                    cursorColor = AppColors.BrandBlue
                 )
             )
         }
@@ -237,22 +239,21 @@ fun FormTextField(
                         onValueChange(newValue)
                     }
                 },
-                label = {
-                    Text(
-                        text = if (isRequired) "$label*" else label,
-                        color = AppColors.TextMain
-                    )
-                },
-                placeholder = { Text(text = placeholder, color = AppColors.TextSub) },
+                label = { Text(text = if (isRequired) "$label*" else label) },
+                placeholder = { Text(text = placeholder, color = AppColors.TextDisabled) },
                 singleLine = singleLine,
                 isError = isError,
                 keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
                 modifier = Modifier.fillMaxWidth(),
+                shape = AppShapes.MediumRadius,
                 colors = TextFieldDefaults.colors(
-                    focusedContainerColor = Color.Transparent,
-                    unfocusedContainerColor = Color.Transparent,
+                    focusedContainerColor = AppColors.SurfaceMuted,
+                    unfocusedContainerColor = AppColors.SurfaceMuted,
+                    errorContainerColor = AppColors.StatusRedSoft,
                     focusedIndicatorColor = if (isError) AppColors.StatusRed else AppColors.BrandBlue,
-                    unfocusedIndicatorColor = if (isError) AppColors.StatusRed else AppColors.BorderColor
+                    unfocusedIndicatorColor = if (isError) AppColors.StatusRed else AppColors.BorderColor,
+                    errorIndicatorColor = AppColors.StatusRed,
+                    cursorColor = AppColors.BrandBlue
                 )
             )
         }
@@ -288,8 +289,9 @@ fun SegmentedSelector(
         )
 
         Surface(
-            color = AppColors.BorderColor,
-            shape = RoundedCornerShape(12.dp)
+            color = AppColors.SurfaceAlt,
+            shape = AppShapes.MediumRadius,
+            border = BorderStroke(1.dp, AppColors.BorderColorLight)
         ) {
             Row(
                 modifier = Modifier
@@ -300,9 +302,9 @@ fun SegmentedSelector(
                     Box(
                         modifier = Modifier
                             .weight(1f)
-                            .clip(RoundedCornerShape(10.dp))
+                            .clip(AppShapes.SmallRadius)
                             .background(
-                                if (selected == option) Color.White else Color.Transparent
+                                if (selected == option) AppColors.SurfaceBackground else Color.Transparent
                             )
                             .clickable { onSelect(option) }
                             .padding(vertical = 10.dp),
@@ -360,9 +362,11 @@ fun DropdownSelector(
                     .fillMaxWidth()
                     .menuAnchor(),
                 colors = TextFieldDefaults.colors(
-                    unfocusedContainerColor = Color.Transparent,
-                    unfocusedIndicatorColor = AppColors.BrandBlue,
-                    focusedIndicatorColor = AppColors.BrandBlue
+                    unfocusedContainerColor = AppColors.SurfaceMuted,
+                    focusedContainerColor = AppColors.SurfaceMuted,
+                    unfocusedIndicatorColor = AppColors.BorderColor,
+                    focusedIndicatorColor = AppColors.BrandBlue,
+                    cursorColor = AppColors.BrandBlue
                 )
             )
 
@@ -392,7 +396,7 @@ fun CountBadge(
 ) {
     Box(
         modifier = modifier
-            .background(AppColors.BrandBlue, RoundedCornerShape(12.dp))
+            .background(AppColors.BrandBlue, AppShapes.MediumRadius)
             .padding(horizontal = 12.dp, vertical = 4.dp)
     ) {
         Text(
@@ -419,7 +423,8 @@ fun DependantCard(
         colors = CardDefaults.cardColors(
             containerColor = AppColors.BrandBlueLite.copy(alpha = 0.3f)
         ),
-        shape = RoundedCornerShape(12.dp)
+        shape = AppShapes.MediumRadius,
+        border = BorderStroke(1.dp, AppColors.BrandBlue.copy(alpha = 0.12f))
     ) {
         Column(
             modifier = Modifier.padding(14.dp)
@@ -526,8 +531,8 @@ fun ImagePickerComponent(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(180.dp)
-                .clip(RoundedCornerShape(16.dp))
-                .background(AppColors.BorderColor.copy(alpha = 0.2f))
+                .clip(AppShapes.LargeRadius)
+                .background(AppColors.SurfaceMuted)
                 .border(
                     width = 2.dp,
                     color = when {
@@ -535,7 +540,7 @@ fun ImagePickerComponent(
                         imageUri != null -> AppColors.BrandBlue
                         else -> AppColors.BorderColor
                     },
-                    shape = RoundedCornerShape(16.dp)
+                    shape = AppShapes.LargeRadius
                 )
                 .clickable { showOptionsDialog = true }
         ) {
@@ -578,9 +583,9 @@ fun ImagePickerComponent(
                 // Bouton supprimer (optionnel mais recommandé)
                 IconButton(
                     onClick = { onImageSelected(null) },
-                    modifier = Modifier.align(Alignment.TopEnd).padding(8.dp).background(Color.White.copy(0.8f), CircleShape)
+                    modifier = Modifier.align(Alignment.TopEnd).padding(8.dp).background(AppColors.SurfaceBackground.copy(0.86f), CircleShape)
                 ) {
-                    Icon(Icons.Rounded.Delete, "Supprimer", tint = Color.Red, modifier = Modifier.size(20.dp))
+                    Icon(Icons.Rounded.Delete, "Supprimer", tint = AppColors.StatusRed, modifier = Modifier.size(20.dp))
                 }
             } else {
                 // État vide amélioré
@@ -654,8 +659,9 @@ private fun ImageSourceDialog(
     Dialog(onDismissRequest = onDismiss) {
         Card(
             shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            elevation = CardDefaults.cardElevation(12.dp)
+            colors = CardDefaults.cardColors(containerColor = AppColors.SurfaceBackground),
+            elevation = CardDefaults.cardElevation(AppElevation.dialog),
+            border = BorderStroke(1.dp, AppColors.BorderColorLight)
         ) {
             Column(
                 modifier = Modifier.padding(24.dp).fillMaxWidth(),
@@ -703,9 +709,9 @@ private fun SourceOptionItem(
     OutlinedButton(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth().height(80.dp),
-        shape = RoundedCornerShape(16.dp),
+        shape = AppShapes.LargeRadius,
         border = BorderStroke(1.dp, AppColors.BorderColor),
-        colors = ButtonDefaults.outlinedButtonColors(containerColor = Color(0xFFF8F9FA))
+        colors = ButtonDefaults.outlinedButtonColors(containerColor = AppColors.SurfaceMuted)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),

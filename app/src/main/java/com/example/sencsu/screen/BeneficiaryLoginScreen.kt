@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.sencsu.domain.viewmodel.BeneficiaryLoginViewModel
 import com.example.sencsu.theme.AppColors
+import com.example.sencsu.theme.AppGradients
 import com.example.sencsu.theme.AppShapes
 import kotlinx.coroutines.delay
 
@@ -66,8 +67,8 @@ fun BeneficiaryLoginScreen(
                 .background(
                     Brush.verticalGradient(
                         listOf(
-                            AppColors.BrandBlueDark,
-                            AppColors.BrandBlue,
+                            AppGradients.Brand[1],
+                            AppGradients.Brand[0],
                             AppColors.BrandBlue.copy(alpha = 0.3f),
                             Color.Transparent
                         )
@@ -113,7 +114,7 @@ fun BeneficiaryLoginScreen(
                     Surface(
                         modifier = Modifier.size(100.dp),
                         shape = CircleShape,
-                        color = Color.White,
+                        color = AppColors.SurfaceBackground,
                         shadowElevation = 16.dp
                     ) {
                         Box(contentAlignment = Alignment.Center) {
@@ -137,7 +138,7 @@ fun BeneficiaryLoginScreen(
                                 Surface(
                                     modifier = Modifier.size(78.dp),
                                     shape = CircleShape,
-                                    color = Color.White
+                                    color = AppColors.SurfaceBackground
                                 ) {
                                     Box(contentAlignment = Alignment.Center) {
                                         Icon(
@@ -191,8 +192,9 @@ fun BeneficiaryLoginScreen(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = AppShapes.LargeRadius,
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 12.dp)
+                    colors = CardDefaults.cardColors(containerColor = AppColors.SurfaceBackground),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, AppColors.BorderColorLight)
                 ) {
                     Column(
                         modifier = Modifier.padding(24.dp),
@@ -238,7 +240,9 @@ fun BeneficiaryLoginScreen(
                                 focusedBorderColor = AppColors.BrandBlue,
                                 unfocusedBorderColor = AppColors.BorderColor,
                                 focusedLabelColor = AppColors.BrandBlue,
-                                cursorColor = AppColors.BrandBlue
+                                cursorColor = AppColors.BrandBlue,
+                                focusedContainerColor = AppColors.SurfaceMuted,
+                                unfocusedContainerColor = AppColors.SurfaceMuted
                             )
                         )
 
@@ -279,7 +283,9 @@ fun BeneficiaryLoginScreen(
                                 focusedBorderColor = AppColors.BrandBlue,
                                 unfocusedBorderColor = AppColors.BorderColor,
                                 focusedLabelColor = AppColors.BrandBlue,
-                                cursorColor = AppColors.BrandBlue
+                                cursorColor = AppColors.BrandBlue,
+                                focusedContainerColor = AppColors.SurfaceMuted,
+                                unfocusedContainerColor = AppColors.SurfaceMuted
                             )
                         )
 
@@ -331,7 +337,7 @@ fun BeneficiaryLoginScreen(
                                     .fillMaxSize()
                                     .background(
                                         Brush.horizontalGradient(
-                                            listOf(AppColors.BrandBlue, AppColors.BrandBlueDark)
+                                            AppGradients.Brand
                                         ),
                                         shape = AppShapes.MediumRadius
                                     ),

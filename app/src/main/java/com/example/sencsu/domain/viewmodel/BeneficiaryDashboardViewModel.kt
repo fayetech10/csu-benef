@@ -3,6 +3,8 @@ package com.example.sencsu.domain.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.sencsu.data.remote.ApiService
+import com.example.sencsu.data.remote.dto.AdherentDto
+import com.example.sencsu.data.remote.dto.AdherentUpdateDto
 import com.example.sencsu.data.remote.dto.PersonneChargeDto
 import com.example.sencsu.data.repository.SessionManager
 import com.example.sencsu.domain.repository.IAdherentRepository
@@ -96,8 +98,73 @@ class BeneficiaryDashboardViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true) }
             adherentRepository.updatePersonneCharge(adherentId, pcId, personne)
                 .onSuccess { refresh() }
+                .onFailure { error -> 
+                    _uiState.update { it.copy(error = error.message, isLoading = false) }
+                }
+        }
+    }
+
+    fun updateProfile(
+        updated: AdherentDto,
+        onComplete: (Boolean, String?) -> Unit
+    ) {
+        val adherentId = updated.id ?: return onComplete(false, "Identifiant adherent introuvable")
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, error = null) }
+            val dto = AdherentUpdateDto(
+                nom = updated.nom.orEmpty(),
+                prenoms = updated.prenoms.orEmpty(),
+                adresse = updated.adresse.orEmpty(),
+                lieuNaissance = updated.lieuNaissance ?: updated.lieuDeNaissance.orEmpty(),
+                sexe = updated.sexe.orEmpty(),
+                dateNaissance = updated.dateNaissance.orEmpty(),
+                situationMatrimoniale = updated.situationM.orEmpty(),
+                whatsapp = updated.whatsapp.orEmpty(),
+                secteurActivite = updated.secteurActivite,
+                region = updated.region.orEmpty(),
+                departement = updated.departement.orEmpty(),
+                commune = updated.commune.orEmpty(),
+                regime = updated.regime.orEmpty(),
+                typeBenef = updated.typeBenef.orEmpty(),
+                typeAdhesion = updated.typeAdhesion.orEmpty(),
+                photo = updated.photo,
+                photoRecto = updated.photoRecto,
+                photoVerso = updated.photoVerso,
+                typePiece = updated.typePiece.orEmpty(),
+                numeroPiece = updated.numeroPiece.orEmpty(),
+                numeroCNi = updated.numeroCNi.orEmpty(),
+                personnesCharge = updated.personnesCharge
+            )
+
+            adherentRepository.updateAdherent(adherentId, dto)
+                .onSuccess {
+                    _uiState.update { it.copy(adherent = updated, isLoading = false) }
+                    refresh()
+                    onComplete(true, null)
+                }
                 .onFailure { error ->
                     _uiState.update { it.copy(error = error.message, isLoading = false) }
+                    onComplete(false, error.message)
+                }
+        }
+    }
+
+    fun updatePassword(
+        oldPassword: String,
+        newPassword: String,
+        onComplete: (Boolean, String?) -> Unit
+    ) {
+        val adherentId = _uiState.value.adherent?.id ?: return onComplete(false, "Identifiant adherent introuvable")
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, error = null) }
+            adherentRepository.updatePassword(adherentId, oldPassword, newPassword)
+                .onSuccess {
+                    _uiState.update { it.copy(isLoading = false) }
+                    onComplete(true, null)
+                }
+                .onFailure { error ->
+                    _uiState.update { it.copy(error = error.message, isLoading = false) }
+                    onComplete(false, error.message)
                 }
         }
     }
