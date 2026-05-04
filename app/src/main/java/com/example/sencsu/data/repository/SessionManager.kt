@@ -1,5 +1,6 @@
 package com.example.sencsu.data.repository
 
+import android.util.Log
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
@@ -115,10 +116,21 @@ class SessionManager @Inject constructor(
      */
     suspend fun isAuthenticated(): Boolean = isAuthenticatedFlow.first()
 
+    // Callback pour notifier l'AuthInterceptor de vider son cache
+    private var onTokenCleared: (() -> Unit)? = null
+
+    /**
+     * Enregistre un callback pour vider le cache du token (AuthInterceptor)
+     */
+    fun setOnTokenClearedCallback(callback: () -> Unit) {
+        onTokenCleared = callback
+    }
+
     /**
      * Efface toutes les données de session
      */
     suspend fun clear() {
+        Log.d("SessionManager", "Clearing session data...")
         dataStore.edit { preferences ->
             val biometric = preferences[BIOMETRIC_ENABLED_KEY]
             val matricule = preferences[SAVED_MATRICULE_KEY]
@@ -126,6 +138,9 @@ class SessionManager @Inject constructor(
             if (biometric != null) preferences[BIOMETRIC_ENABLED_KEY] = biometric
             if (matricule != null) preferences[SAVED_MATRICULE_KEY] = matricule
         }
+        // Vider le cache token de l'intercepteur HTTP
+        onTokenCleared?.invoke()
+        Log.d("SessionManager", "Session data cleared successfully")
     }
 
     /**

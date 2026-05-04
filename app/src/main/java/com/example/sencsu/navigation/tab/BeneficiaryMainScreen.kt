@@ -10,6 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -17,6 +18,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.example.sencsu.domain.viewmodel.AppNavigationViewModel
 import com.example.sencsu.navigation.Screen
 import com.example.sencsu.screen.*
 import com.example.sencsu.theme.AppColors
@@ -27,6 +29,7 @@ fun BeneficiaryMainScreen(rootNavController: NavController) {
     val nestedNavController = rememberNavController()
     val navBackStackEntry by nestedNavController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
+    val appNavViewModel: AppNavigationViewModel = hiltViewModel()
 
     Scaffold(
         bottomBar = {
@@ -91,6 +94,9 @@ fun BeneficiaryMainScreen(rootNavController: NavController) {
                         nestedNavController.navigate(Screen.MedicalHistory.createRoute(adherentId))
                     },
                     onLogout = {
+                        // 1. Effacer la session (DataStore + token cache HTTP)
+                        appNavViewModel.logout()
+                        // 2. Naviguer vers le login en vidant le backstack
                         rootNavController.navigate(Screen.BeneficiaryLogin.route) {
                             popUpTo(0) { inclusive = true }
                         }

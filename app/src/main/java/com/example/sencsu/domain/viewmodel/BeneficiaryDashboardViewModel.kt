@@ -9,6 +9,8 @@ import com.example.sencsu.domain.repository.IAdherentRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -24,7 +26,16 @@ class BeneficiaryDashboardViewModel @Inject constructor(
     val uiState = _uiState.asStateFlow()
 
     init {
-        refresh()
+        // Observer le token de manière réactive :
+        // Quand un nouvel utilisateur se connecte, le token change → on refresh
+        viewModelScope.launch {
+            sessionManager.tokenFlow
+                .filterNotNull()
+                .distinctUntilChanged()
+                .collect {
+                    refresh()
+                }
+        }
     }
 
     fun refresh() {

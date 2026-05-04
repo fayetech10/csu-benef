@@ -24,10 +24,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.example.sencsu.domain.viewmodel.AppNavigationViewModel
 import com.example.sencsu.navigation.Screen
 import com.example.sencsu.screen.*
 import com.example.sencsu.theme.AppColors
@@ -39,6 +41,7 @@ fun MainScreen(rootNavController: NavController) {
     val nestedNavController = rememberNavController()
     val navBackStackEntry by nestedNavController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
+    val appNavViewModel: AppNavigationViewModel = hiltViewModel()
 
     Scaffold(
         bottomBar = {
@@ -72,7 +75,9 @@ fun MainScreen(rootNavController: NavController) {
             composable(BottomNavItem.Profile.route) {
                 ProfileScreen(
                     onLogout = {
-                        // Naviguer vers le login en vidant le backstack
+                        // 1. Effacer la session (DataStore + token cache HTTP)
+                        appNavViewModel.logout()
+                        // 2. Naviguer vers le login en vidant le backstack
                         rootNavController.navigate(Screen.BeneficiaryLogin.route) {
                             popUpTo(0) { inclusive = true }
                         }

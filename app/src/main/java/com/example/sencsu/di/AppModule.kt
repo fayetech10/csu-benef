@@ -41,8 +41,12 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideAuthInterceptor(sessionManager: SessionManager): AuthInterceptor =
-        AuthInterceptor(sessionManager)
+    fun provideAuthInterceptor(sessionManager: SessionManager): AuthInterceptor {
+        val interceptor = AuthInterceptor(sessionManager)
+        // Connecter le callback pour vider le cache token lors de la déconnexion
+        sessionManager.setOnTokenClearedCallback { interceptor.clearCachedToken() }
+        return interceptor
+    }
 
     @Provides
     @Singleton
