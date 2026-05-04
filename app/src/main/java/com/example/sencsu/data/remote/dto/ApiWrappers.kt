@@ -1,10 +1,9 @@
 package com.example.sencsu.data.remote.dto
 
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
+import com.google.gson.annotations.SerializedName
 
 /**
- * Réponse API générique encapsulant un objet data.
+ * Enveloppe générique pour les réponses API standard.
  */
 data class ApiResponse<T>(
     val success: Boolean,
@@ -13,45 +12,16 @@ data class ApiResponse<T>(
 )
 
 /**
- * Réponse API pour les paiements (non-générique).
+ * Réponse spécifique pour les listes d'adhérents (Dashboard).
  */
-@Serializable
-data class ApiResponseP(
-    val success: Boolean = true,
+data class DashboardResponseDto(
+    val success: Boolean = false,
     val message: String = "",
-    val data: String? = null
+    val data: List<AdherentDto> = emptyList()
 )
 
 /**
- * Structure pour parser les erreurs du backend.
- * S'adapte aux formats courants : {"message": "..."} ou {"error": "..."}
- */
-@Serializable
-data class ErrorResponse(
-    @SerialName("message")
-    val message: String? = null,
-
-    @SerialName("error")
-    val error: String? = null,
-
-    @SerialName("errors")
-    val errors: List<String>? = null
-) {
-    fun getErrorMessage(): String {
-        return message
-            ?: error
-            ?: errors?.joinToString(", ")
-            ?: "Erreur inconnue"
-    }
-}
-
-/**
- * Exception spécifique pour les erreurs de validation (400)
- */
-class ValidationException(message: String) : Exception(message)
-
-/**
- * Réponse de création d'adhérent.
+ * Réponse après création réussie d'un adhérent.
  */
 data class CreateAdherentResponse(
     val success: Boolean,
@@ -60,31 +30,53 @@ data class CreateAdherentResponse(
 )
 
 /**
- * ID de l'adhérent retourné après création.
+ * Détails de l'adhérent créé (ID, matricule, mot de passe).
  */
 data class AdherentIdResponse(
-    @com.google.gson.annotations.SerializedName("adherent_id")
+    @SerializedName("adherent_id")
     val adherentId: String,
-    
     val matricule: String? = null,
-    
-    @com.google.gson.annotations.SerializedName("default_password")
+    @SerializedName("default_password")
     val defaultPassword: String? = null
 )
 
 /**
- * Réponse du dashboard (liste d'adhérents).
+ * Réponse pour l'upload de fichiers.
  */
-data class DashboardResponseDto(
-    val message: String = "",
-    val success: Boolean = false,
-    val data: List<AdherentDto> = emptyList()
+data class UploadResponse(
+    val filename: String?,
+    val url: String?
 )
 
 /**
- * Réponse d'upload de fichier.
+ * Structure d'erreur standard renvoyée par le backend.
  */
-data class UploadResponse(
-    @com.google.gson.annotations.SerializedName("filename") val filename: String?,
-    @com.google.gson.annotations.SerializedName("url") val url: String?
+data class ErrorResponse(
+    val message: String? = null,
+    val error: String? = null,
+    val errors: List<String>? = null
+) {
+    /**
+     * Extrait le message d'erreur le plus pertinent.
+     */
+    fun getErrorMessage(): String {
+        return message
+            ?: error
+            ?: errors?.joinToString(", ")
+            ?: "Une erreur inconnue s'est produite"
+    }
+}
+
+/**
+ * Réponse spécifique pour les paiements (Legacy).
+ */
+data class ApiResponseP(
+    val success: Boolean = true,
+    val message: String = "",
+    val data: String? = null
 )
+
+/**
+ * Exception personnalisée pour les erreurs de validation côté client.
+ */
+class ValidationException(message: String) : Exception(message)

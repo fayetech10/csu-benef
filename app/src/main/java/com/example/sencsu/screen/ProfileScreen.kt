@@ -3,6 +3,7 @@ package com.example.sencsu.screen
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -24,6 +25,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import coil.compose.SubcomposeAsyncImage
+import com.example.sencsu.configs.ApiConfig
 import com.example.sencsu.domain.viewmodel.BeneficiaryDashboardViewModel
 import com.example.sencsu.theme.AppColors
 import com.example.sencsu.theme.AppShapes
@@ -31,6 +34,7 @@ import kotlinx.coroutines.delay
 
 @Composable
 fun ProfileScreen(
+    onNavigateToHistory: (String) -> Unit = {},
     viewModel: BeneficiaryDashboardViewModel = hiltViewModel(),
     onLogout: () -> Unit = {}
 ) {
@@ -45,6 +49,7 @@ fun ProfileScreen(
 
     var showContent by remember { mutableStateOf(false) }
     var showLogoutDialog by remember { mutableStateOf(false) }
+    var selectedViewerImage by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
         delay(100)
@@ -105,13 +110,36 @@ fun ProfileScreen(
                                 2.dp, Color.White.copy(alpha = 0.3f)
                             )
                         ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Surface(
-                                    shape = CircleShape,
-                                    color = Color.White,
-                                    modifier = Modifier.size(82.dp)
-                                ) {
-                                    Box(contentAlignment = Alignment.Center) {
+                            Surface(
+                                shape = CircleShape,
+                                color = Color.White,
+                                modifier = Modifier.size(82.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    val photoUrl = ApiConfig.getImageUrl(adherent?.photo)
+                                    if (photoUrl != null) {
+                                        SubcomposeAsyncImage(
+                                            model = photoUrl,
+                                            contentDescription = "Photo de profil",
+                                            modifier = Modifier.fillMaxSize().clip(CircleShape),
+                                            contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                                            loading = {
+                                                CircularProgressIndicator(
+                                                    modifier = Modifier.padding(24.dp),
+                                                    strokeWidth = 2.dp,
+                                                    color = AppColors.BrandBlue
+                                                )
+                                            },
+                                            error = {
+                                                Text(
+                                                    initials.ifEmpty { "?" },
+                                                    fontSize = 30.sp,
+                                                    fontWeight = FontWeight.Black,
+                                                    color = AppColors.BrandBlue
+                                                )
+                                            }
+                                        )
+                                    } else {
                                         Text(
                                             initials.ifEmpty { "?" },
                                             fontSize = 30.sp,
@@ -214,6 +242,49 @@ fun ProfileScreen(
         }
 
         Spacer(Modifier.height(4.dp))
+        
+        // ── Section Documents & Pièces ──
+        Column {
+            AnimatedVisibility(
+                visible = showContent,
+                enter = fadeIn(tween(300, delayMillis = 300)) + slideInVertically(
+                    tween(300, delayMillis = 300), initialOffsetY = { 30 }
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(horizontal = 20.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        "Documents & Pièces",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = AppColors.TextMain,
+                        modifier = Modifier.padding(bottom = 4.dp)
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        DocumentPhotoCard(
+                            modifier = Modifier.weight(1f),
+                            title = "Recto",
+                            photoUrl = ApiConfig.getImageUrl(adherent?.photoRecto),
+                            onClick = { selectedViewerImage = ApiConfig.getImageUrl(adherent?.photoRecto) }
+                        )
+                        DocumentPhotoCard(
+                            modifier = Modifier.weight(1f),
+                            title = "Verso",
+                            photoUrl = ApiConfig.getImageUrl(adherent?.photoVerso),
+                            onClick = { selectedViewerImage = ApiConfig.getImageUrl(adherent?.photoVerso) }
+                        )
+                    }
+                }
+            }
+        }
+
+        Spacer(Modifier.height(24.dp))
 
         // ── Section paramètres ──
         Column {
@@ -236,27 +307,38 @@ fun ProfileScreen(
                     )
 
                     SettingsItem(
+                        icon = Icons.Rounded.MedicalServices,
+                        title = "Historique médical",
+                        subtitle = "Vos soins et remboursements",
+                        onClick = { adherent?.id?.let { onNavigateToHistory(it) } }
+                    )
+
+                    SettingsItem(
                         icon = Icons.Rounded.Lock,
                         title = "Modifier le mot de passe",
-                        subtitle = "Sécurité du compte"
+                        subtitle = "Sécurité du compte",
+                        onClick = {}
                     )
 
                     SettingsItem(
                         icon = Icons.Rounded.Info,
                         title = "À propos",
-                        subtitle = "Version 1.0.0"
+                        subtitle = "Version 1.0.0",
+                        onClick = {}
                     )
 
                     SettingsItem(
                         icon = Icons.Rounded.Security,
                         title = "Confidentialité",
-                        subtitle = "Gestion des données"
+                        subtitle = "Gestion des données",
+                        onClick = {}
                     )
 
                     SettingsItem(
                         icon = Icons.AutoMirrored.Rounded.HelpOutline,
                         title = "Aide & Support",
-                        subtitle = "Centre d'aide CMU"
+                        subtitle = "Centre d'aide CMU",
+                        onClick = {}
                     )
                 }
             }
@@ -337,6 +419,14 @@ fun ProfileScreen(
             shape = AppShapes.LargeRadius
         )
     }
+
+    // Dialog de visualisation d'image
+    if (selectedViewerImage != null) {
+        ImageViewerDialog(
+            imageUrl = selectedViewerImage!!,
+            onDismiss = { selectedViewerImage = null }
+        )
+    }
 }
 
 @Composable
@@ -379,9 +469,11 @@ private fun ProfileInfoRow(
 private fun SettingsItem(
     icon: ImageVector,
     title: String,
-    subtitle: String
+    subtitle: String,
+    onClick: () -> Unit
 ) {
     Card(
+        onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
         shape = AppShapes.MediumRadius,
         colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -421,6 +513,99 @@ private fun SettingsItem(
                 tint = AppColors.TextSub.copy(alpha = 0.5f),
                 modifier = Modifier.size(20.dp)
             )
+        }
+    }
+}
+
+@Composable
+private fun DocumentPhotoCard(
+    modifier: Modifier = Modifier,
+    title: String,
+    photoUrl: String?,
+    onClick: () -> Unit
+) {
+    Card(
+        onClick = onClick,
+        modifier = modifier.height(100.dp),
+        shape = AppShapes.MediumRadius,
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            if (photoUrl != null) {
+                SubcomposeAsyncImage(
+                    model = photoUrl,
+                    contentDescription = title,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                    loading = {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(20.dp))
+                        }
+                    }
+                )
+            } else {
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(Icons.Rounded.ImageNotSupported, null, tint = AppColors.TextDisabled)
+                    Text("Non dispo.", fontSize = 10.sp, color = AppColors.TextDisabled)
+                }
+            }
+            
+            // Label overlay
+            Surface(
+                modifier = Modifier.align(Alignment.BottomStart).padding(8.dp),
+                color = Color.Black.copy(alpha = 0.6f),
+                shape = AppShapes.ExtraSmallRadius
+            ) {
+                Text(
+                    title,
+                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                    color = Color.White,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ImageViewerDialog(
+    imageUrl: String,
+    onDismiss: () -> Unit
+) {
+    androidx.compose.ui.window.Dialog(
+        onDismissRequest = onDismiss,
+        properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = Color.Black.copy(alpha = 0.9f)
+        ) {
+            Box(modifier = Modifier.fillMaxSize()) {
+                SubcomposeAsyncImage(
+                    model = imageUrl,
+                    contentDescription = "Vue plein écran",
+                    modifier = Modifier.fillMaxSize().clickable { onDismiss() },
+                    contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+                    loading = {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(color = Color.White)
+                        }
+                    }
+                )
+                
+                IconButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.align(Alignment.TopEnd).padding(16.dp)
+                ) {
+                    Icon(Icons.Rounded.Close, null, tint = Color.White, modifier = Modifier.size(32.dp))
+                }
+            }
         }
     }
 }

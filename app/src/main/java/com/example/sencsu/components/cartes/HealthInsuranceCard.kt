@@ -62,6 +62,9 @@ fun HealthInsuranceCard(
     modifier: Modifier = Modifier,
     sessionManager: SessionManager
 ) {
+    val context = LocalContext.current
+    val token by sessionManager.tokenFlow.collectAsState(initial = null)
+
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -146,8 +149,7 @@ fun HealthInsuranceCard(
                     photoUrl = data.photo,
                     modifier = Modifier
                         .size(120.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .border(2.dp, Color(0xFF2D7F4F), RoundedCornerShape(12.dp)),
+                        .clip(RoundedCornerShape(12.dp)),
                     sessionManager = sessionManager
 
                 )
@@ -228,10 +230,12 @@ fun HealthInsuranceCard(
                                 .padding(6.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            if (data.qrCodeUrl != null) {
+                            if (!data.matricule.isNullOrBlank() && data.matricule != "null") {
                                 AsyncImage(
-//                                    model = data.qrCodeUrl,
-                                    model = "https://pngimg.com/uploads/qr_code/qr_code_PNG17.png",
+                                    model = ImageRequest.Builder(context)
+                                        .data(ApiConfig.getQrCodeUrl(data.matricule))
+                                        .apply { token?.let { addHeader("Authorization", "Bearer $it") } }
+                                        .build(),
                                     contentDescription = "QR Code",
                                     modifier = Modifier.fillMaxSize(),
                                     contentScale = ContentScale.Crop

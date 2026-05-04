@@ -19,6 +19,8 @@ class SessionManager @Inject constructor(
         private val AUTH_TOKEN_KEY = stringPreferencesKey("auth_token")
         private val USER_KEY = stringPreferencesKey("user")
         private val AGENT_ID_KEY = stringPreferencesKey("agent_id")
+        private val BIOMETRIC_ENABLED_KEY = stringPreferencesKey("biometric_enabled")
+        private val SAVED_MATRICULE_KEY = stringPreferencesKey("saved_matricule")
     }
 
     // Événement pour notifier la déconnexion
@@ -118,7 +120,11 @@ class SessionManager @Inject constructor(
      */
     suspend fun clear() {
         dataStore.edit { preferences ->
+            val biometric = preferences[BIOMETRIC_ENABLED_KEY]
+            val matricule = preferences[SAVED_MATRICULE_KEY]
             preferences.clear()
+            if (biometric != null) preferences[BIOMETRIC_ENABLED_KEY] = biometric
+            if (matricule != null) preferences[SAVED_MATRICULE_KEY] = matricule
         }
     }
 
@@ -140,4 +146,18 @@ class SessionManager @Inject constructor(
             user.id?.let { preferences[AGENT_ID_KEY] = it }
         }
     }
+
+    suspend fun setBiometricEnabled(enabled: Boolean) {
+        dataStore.edit { it[BIOMETRIC_ENABLED_KEY] = enabled.toString() }
+    }
+
+    val isBiometricEnabledFlow: Flow<Boolean> = dataStore.data
+        .map { it[BIOMETRIC_ENABLED_KEY] == "true" }
+        .catch { emit(false) }
+
+    suspend fun saveMatricule(matricule: String) {
+        dataStore.edit { it[SAVED_MATRICULE_KEY] = matricule }
+    }
+
+    suspend fun getSavedMatricule(): String? = dataStore.data.map { it[SAVED_MATRICULE_KEY] }.first()
 }

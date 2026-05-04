@@ -2,8 +2,9 @@ package com.example.sencsu.domain.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.sencsu.data.remote.dto.AdherentDto
+import com.example.sencsu.data.remote.ApiService
 import com.example.sencsu.data.remote.dto.PersonneChargeDto
+import com.example.sencsu.data.repository.SessionManager
 import com.example.sencsu.domain.repository.IAdherentRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,7 +15,9 @@ import javax.inject.Inject
 
 @HiltViewModel
 class BeneficiaryDashboardViewModel @Inject constructor(
-    private val adherentRepository: IAdherentRepository
+    private val adherentRepository: IAdherentRepository,
+    private val apiService: ApiService,
+    val sessionManager: SessionManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(BeneficiaryDashboardUiState())
@@ -30,10 +33,25 @@ class BeneficiaryDashboardViewModel @Inject constructor(
             adherentRepository.getMyInfo()
                 .onSuccess { adherent ->
                     _uiState.update { it.copy(adherent = adherent, isLoading = false) }
+                    // Charger les services médicaux récents
+                    adherent.id?.let { loadRecentServices(it) }
                 }
                 .onFailure { error ->
                     _uiState.update { it.copy(error = error.message ?: "Erreur de chargement", isLoading = false) }
                 }
+        }
+    }
+
+    private fun loadRecentServices(adherentId: String) {
+        viewModelScope.launch {
+            try {
+                val response = apiService.getRecentServicesMedicaux(adherentId)
+                val services = response.data ?: emptyList()
+                _uiState.update { it.copy(recentServices = services) }
+            } catch (e: Exception) {
+                // Silently fail — services are secondary content
+                _uiState.update { it.copy(recentServices = emptyList()) }
+            }
         }
     }
 
@@ -73,9 +91,3 @@ class BeneficiaryDashboardViewModel @Inject constructor(
         }
     }
 }
-
-data class BeneficiaryDashboardUiState(
-    val adherent: AdherentDto? = null,
-    val isLoading: Boolean = false,
-    val error: String? = null
-)

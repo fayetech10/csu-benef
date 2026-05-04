@@ -25,7 +25,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import com.example.sencsu.configs.ApiConfig
 import com.example.sencsu.data.remote.dto.AdherentDto
+import com.example.sencsu.data.repository.SessionManager
+import androidx.compose.ui.platform.LocalContext
 
 /**
  * Modèle de données pour la carte de couverture sanitaire
@@ -49,8 +53,11 @@ data class HealthCardData(
 @Composable
 fun HealthInsuranceCardWithFlip(
     data: AdherentDto,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    sessionManager: SessionManager
 ) {
+    val context = LocalContext.current
+    val token by sessionManager.tokenFlow.collectAsState(initial = null)
     var isFlipped by remember { mutableStateOf(false) }
 
     // Animation de rotation
@@ -80,7 +87,9 @@ fun HealthInsuranceCardWithFlip(
                     .graphicsLayer {
                         this.rotationY = rotationY
                         cameraDistance = 8 * density
-                    }
+                    },
+                context = context,
+                token = token
             )
         } else {
             // Verso de la carte
@@ -103,7 +112,9 @@ fun HealthInsuranceCardWithFlip(
 @Composable
 private fun CardRecto(
     data: AdherentDto,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    context: android.content.Context,
+    token: String?
 ) {
     Box(
         modifier = modifier.clip(RoundedCornerShape(20.dp))
@@ -171,9 +182,12 @@ private fun CardRecto(
                             .background(Color.White),
                         contentAlignment = Alignment.Center
                     ) {
-                        if (data.qrCodeUrl != null) {
+                        if (!data.matricule.isNullOrBlank() && data.matricule != "null") {
                             AsyncImage(
-                                model = data.qrCodeUrl,
+                                model = ImageRequest.Builder(context)
+                                    .data(ApiConfig.getQrCodeUrl(data.matricule))
+                                    .apply { token?.let { addHeader("Authorization", "Bearer $it") } }
+                                    .build(),
                                 contentDescription = "QR Code",
                                 modifier = Modifier
                                     .fillMaxSize()

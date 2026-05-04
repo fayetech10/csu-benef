@@ -10,4 +10,5 @@ interface IAdherentRepository {
     suspend fun addPersonneCharge(adherentId: String, personne: PersonneChargeDto): Result<PersonneChargeDto>
     suspend fun deletePersonneCharge(adherentId: String, pcId: String): Result<Unit>
     suspend fun updatePersonneCharge(adherentId: String, pcId: String, personne: PersonneChargeDto): Result<PersonneChargeDto>
+    suspend fun scanAdherent(matricule: String): Result<AdherentDto>
 }

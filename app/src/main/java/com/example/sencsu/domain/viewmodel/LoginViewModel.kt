@@ -35,39 +35,59 @@ class LoginViewModel @Inject constructor(
     private val _eventChannel = Channel<LoginUiEvent>()
     val uiEvent = _eventChannel.receiveAsFlow()
 
+    private val _canUseBiometric = MutableStateFlow(false)
+    val canUseBiometric = _canUseBiometric.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            sessionManager.isBiometricEnabledFlow.collect { enabled ->
+                _canUseBiometric.value = enabled
+            }
+        }
+    }
+
+    suspend fun getSavedMatricule(): String? = sessionManager.getSavedMatricule()
+
     fun login(email: String, password: String) {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
             try {
                 val response = authRepository.login(email, password)
                 
-                // On vérifie que les données essentielles sont présentes
                 if (response.accessToken.isNullOrBlank()) {
-                    // Si accessToken est vide alors que le repo n'a pas jeté d'exception,
-                    // c'est que le champ n'a pas pu être extrait de la réponse "succès".
-                    throw Exception("Connexion réussie mais token d'accès introuvable dans la réponse.")
+                    throw Exception("Connexion réussie mais token d'accès introuvable.")
                 }
                 
                 if (response.user == null) {
-                    throw Exception("Informations utilisateur manquantes dans la réponse du serveur.")
+                    throw Exception("Informations utilisateur manquantes.")
                 }
 
-                // On sauvegarde le token et l'utilisateur
                 sessionManager.saveAuthToken(response.accessToken)
                 sessionManager.saveUser(response.user)
+                sessionManager.saveMatricule(email)
+                sessionManager.setBiometricEnabled(true) // Activer après succès manuel
 
-                // On envoie l'événement de navigation
                 _eventChannel.send(LoginUiEvent.NavigateToDashboard)
                 _state.update { it.copy(isLoading = false) }
 
             } catch (e: Exception) {
-                Log.e("LoginViewModel", "Login Failed: ${e.message}")
-                _state.update {
-                    it.copy(
-                        isLoading = false,
-                        error = e.message ?: "Une erreur inconnue est survenue"
-                    )
-                }
+                _state.update { it.copy(isLoading = false, error = e.message ?: "Erreur") }
+            }
+        }
+    }
+
+    fun loginWithBiometric() {
+        viewModelScope.launch {
+            // Dans une vraie app, on utiliserait un token sécurisé.
+            // Ici pour la démo, si la biométrie réussit, on considère l'utilisateur connecté 
+            // s'il a déjà été connecté une fois (flag biometricEnabled).
+            val savedUser = sessionManager.getUser()
+            val savedToken = sessionManager.getToken()
+
+            if (savedUser != null && savedToken != null) {
+                _eventChannel.send(LoginUiEvent.NavigateToDashboard)
+            } else {
+                _state.update { it.copy(error = "Veuillez vous connecter manuellement une première fois.") }
             }
         }
     }

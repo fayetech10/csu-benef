@@ -6,9 +6,11 @@ import androidx.annotation.RequiresApi
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -66,12 +68,7 @@ fun MainScreen(rootNavController: NavController) {
             composable(BottomNavItem.Dependents.route) {
                 DependentsScreen()
             }
-            composable(BottomNavItem.Renewal.route) {
-                RenewalScreen(onFinish = { nestedNavController.navigate(BottomNavItem.Home.route) })
-            }
-            composable(BottomNavItem.Documents.route) {
-                DocumentsScreen()
-            }
+
             composable(BottomNavItem.Profile.route) {
                 ProfileScreen(
                     onLogout = {
@@ -86,7 +83,6 @@ fun MainScreen(rootNavController: NavController) {
     }
 }
 
-@SuppressLint("UnusedBoxWithConstraintsScope")
 @Composable
 fun SubscriberBottomNavigation(
     currentRoute: String?,
@@ -95,8 +91,6 @@ fun SubscriberBottomNavigation(
     val items = listOf(
         BottomNavItem.Home,
         BottomNavItem.Dependents,
-        BottomNavItem.Renewal,
-        BottomNavItem.Documents,
         BottomNavItem.Profile
     )
 
@@ -104,69 +98,77 @@ fun SubscriberBottomNavigation(
 
     Surface(
         modifier = Modifier
-            .padding(horizontal = 16.dp, vertical = 16.dp)
+            .padding(horizontal = 24.dp, vertical = 20.dp)
             .height(68.dp)
-            .shadow(12.dp, AppShapes.LargeRadius),
-        shape = AppShapes.LargeRadius,
-        color = Color.White
+            .shadow(16.dp, CircleShape, ambientColor = AppColors.BrandBlue.copy(alpha = 0.4f)),
+        shape = CircleShape,
+        color = Color.White.copy(alpha = 0.98f),
+        border = BorderStroke(1.dp, AppColors.BrandBlue.copy(alpha = 0.05f))
     ) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            // INDICATOR PILL
-            BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-                val itemWidth = maxWidth / items.size
-                val pillOffset by animateDpAsState(
-                    targetValue = itemWidth * selectedIndex,
-                    animationSpec = spring(0.8f, Spring.StiffnessLow),
-                    label = "pill"
-                )
-
+        Row(
+            modifier = Modifier.fillMaxSize(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            items.forEachIndexed { index, item ->
+                val isSelected = currentRoute == item.route
+                
                 Box(
                     modifier = Modifier
-                        .offset(x = pillOffset)
-                        .width(itemWidth)
+                        .weight(1f)
                         .fillMaxHeight()
-                        .padding(6.dp)
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) { onNavigate(item.route) },
+                    contentAlignment = Alignment.Center
                 ) {
-                    Surface(
-                        modifier = Modifier.fillMaxSize(),
-                        shape = AppShapes.MediumRadius,
-                        color = AppColors.BrandBlue.copy(0.08f),
-                        border = BorderStroke(1.dp, AppColors.BrandBlue.copy(0.05f))
-                    ) {}
-                }
-            }
-
-            // ITEMS
-            Row(modifier = Modifier.fillMaxSize()) {
-                items.forEachIndexed { index, item ->
-                    val isSelected = index == selectedIndex
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight()
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null
-                            ) { onNavigate(item.route) },
-                        contentAlignment = Alignment.Center
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
                     ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        val iconScale by animateFloatAsState(
+                            targetValue = if (isSelected) 1.25f else 1f,
+                            animationSpec = spring(
+                                dampingRatio = Spring.DampingRatioMediumBouncy,
+                                stiffness = Spring.StiffnessLow
+                            ),
+                            label = "scale"
+                        )
+                        
+                        Box(contentAlignment = Alignment.Center) {
+                            if (isSelected) {
+                                // Background glow circle
+                                Box(
+                                    modifier = Modifier
+                                        .size(42.dp)
+                                        .background(
+                                            AppColors.BrandBlue.copy(alpha = 0.1f),
+                                            CircleShape
+                                        )
+                                )
+                            }
                             Icon(
                                 imageVector = if (isSelected) item.icon else item.iconOutlined,
                                 contentDescription = item.label,
-                                tint = if (isSelected) AppColors.BrandBlue else AppColors.TextSub.copy(0.6f),
+                                tint = if (isSelected) AppColors.BrandBlue else AppColors.TextSub.copy(alpha = 0.6f),
                                 modifier = Modifier
-                                    .size(22.dp)
-                                    .scale(if (isSelected) 1.1f else 1f)
+                                    .size(24.dp)
+                                    .scale(iconScale)
                             )
-                            if (isSelected) {
-                                Text(
-                                    item.label,
-                                    fontSize = 9.sp,
-                                    fontWeight = FontWeight.Black,
-                                    color = AppColors.BrandBlue
-                                )
-                            }
+                        }
+                        
+                        AnimatedVisibility(
+                            visible = isSelected,
+                            enter = expandVertically(expandFrom = Alignment.Top) + fadeIn(),
+                            exit = shrinkVertically(shrinkTowards = Alignment.Top) + fadeOut()
+                        ) {
+                            Text(
+                                text = item.label,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = AppColors.BrandBlue,
+                                modifier = Modifier.padding(top = 2.dp)
+                            )
                         }
                     }
                 }

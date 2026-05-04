@@ -1,8 +1,10 @@
 package com.example.sencsu.theme
 
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
@@ -53,6 +55,19 @@ object AppColors {
     
     // Legacy compatible colors
     val LogoYellow = Color(0xFFFBBF24)
+
+    // ── Dark Mode ──
+    val DarkBackground = Color(0xFF0F1419)         // Fond principal sombre
+    val DarkSurface = Color(0xFF1A1F2E)            // Surface sombre
+    val DarkSurfaceAlt = Color(0xFF232A3B)         // Surface alternative sombre
+    val DarkBrandGreen = Color(0xFF22D393)         // Vert lumineux pour dark mode
+    val DarkBrandGreenDark = Color(0xFF1A7F5A)     // Vert profond en dark
+    val DarkTextMain = Color(0xFFE8ECF1)           // Texte clair
+    val DarkTextSub = Color(0xFF94A3B8)            // Texte secondaire
+    val DarkBorder = Color(0xFF2A3441)             // Bordure sombre
+    val DarkBorderLight = Color(0xFF1E2733)        // Bordure très sombre
+    val DarkCardStart = Color(0xFF22D393)          // Gradient carte dark
+    val DarkCardEnd = Color(0xFF115C41)             // Gradient carte dark fin
 }
 
 object AppShapes {
@@ -123,26 +138,50 @@ object AppDurations {
 // SCHÉMA DE COULEUR MATERIAL 3
 // ==============================================================================
 
+private val LightColorScheme = lightColorScheme(
+    primary = AppColors.BrandBlue,
+    onPrimary = Color.White,
+    secondary = AppColors.BrandBlueDark,
+    onSecondary = Color.White,
+    tertiary = AppColors.StatusOrange,
+    onTertiary = Color.White,
+    error = AppColors.StatusRed,
+    onError = Color.White,
+    background = AppColors.AppBackground,
+    onBackground = AppColors.TextMain,
+    surface = AppColors.SurfaceBackground,
+    onSurface = AppColors.TextMain,
+    surfaceVariant = AppColors.SurfaceAlt,
+    onSurfaceVariant = AppColors.TextSub,
+    outline = AppColors.BorderColor,
+    outlineVariant = AppColors.BorderColorLight,
+)
+
+private val DarkColorScheme = darkColorScheme(
+    primary = AppColors.DarkBrandGreen,
+    onPrimary = AppColors.DarkBackground,
+    secondary = AppColors.DarkBrandGreenDark,
+    onSecondary = Color.White,
+    tertiary = AppColors.StatusOrange,
+    onTertiary = AppColors.DarkBackground,
+    error = AppColors.StatusRed,
+    onError = AppColors.DarkBackground,
+    background = AppColors.DarkBackground,
+    onBackground = AppColors.DarkTextMain,
+    surface = AppColors.DarkSurface,
+    onSurface = AppColors.DarkTextMain,
+    surfaceVariant = AppColors.DarkSurfaceAlt,
+    onSurfaceVariant = AppColors.DarkTextSub,
+    outline = AppColors.DarkBorder,
+    outlineVariant = AppColors.DarkBorderLight,
+)
+
 @Composable
-fun AppTheme(content: @Composable () -> Unit) {
-    val colorScheme = lightColorScheme(
-        primary = AppColors.BrandBlue,
-        onPrimary = Color.White,
-        secondary = AppColors.BrandBlueDark,
-        onSecondary = Color.White,
-        tertiary = AppColors.StatusOrange,
-        onTertiary = Color.White,
-        error = AppColors.StatusRed,
-        onError = Color.White,
-        background = AppColors.AppBackground,
-        onBackground = AppColors.TextMain,
-        surface = AppColors.SurfaceBackground,
-        onSurface = AppColors.TextMain,
-        surfaceVariant = AppColors.SurfaceAlt,
-        onSurfaceVariant = AppColors.TextSub,
-        outline = AppColors.BorderColor,
-        outlineVariant = AppColors.BorderColorLight,
-    )
+fun AppTheme(
+    darkTheme: Boolean = isSystemInDarkTheme(),
+    content: @Composable () -> Unit
+) {
+    val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
 
     MaterialTheme(
         colorScheme = colorScheme,

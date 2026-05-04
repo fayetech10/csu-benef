@@ -33,6 +33,10 @@ import com.example.sencsu.domain.viewmodel.LoginUiEvent
 import com.example.sencsu.domain.viewmodel.LoginViewModel
 import com.example.sencsu.theme.AppColors
 import com.example.sencsu.theme.AppShapes
+import com.example.sencsu.utils.BiometricHelper
+import androidx.compose.ui.platform.LocalContext
+import androidx.fragment.app.FragmentActivity
+import androidx.compose.material.icons.rounded.Fingerprint
 import kotlinx.coroutines.delay
 
 @Composable
@@ -49,6 +53,9 @@ fun LoginScreen(
     val focusManager = LocalFocusManager.current
 
     LaunchedEffect(Unit) {
+        viewModel.getSavedMatricule()?.let { savedEmail ->
+            email = savedEmail
+        }
         delay(200)
         showContent = true
     }
@@ -200,27 +207,62 @@ fun LoginScreen(
                             }
                         }
 
-                        // Bouton de connexion
-                        Button(
-                            onClick = {
-                                focusManager.clearFocus()
-                                viewModel.login(email.trim(), password)
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(52.dp),
-                            shape = AppShapes.MediumRadius,
-                            colors = ButtonDefaults.buttonColors(containerColor = AppColors.BrandBlue),
-                            enabled = email.isNotBlank() && password.isNotBlank() && !state.isLoading
+                        // Bouton de connexion et Biométrie
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            if (state.isLoading) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(24.dp),
-                                    color = Color.White,
-                                    strokeWidth = 2.dp
-                                )
-                            } else {
-                                Text("Se connecter", fontWeight = FontWeight.Bold)
+                            Button(
+                                onClick = {
+                                    focusManager.clearFocus()
+                                    viewModel.login(email.trim(), password)
+                                },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(52.dp),
+                                shape = AppShapes.MediumRadius,
+                                colors = ButtonDefaults.buttonColors(containerColor = AppColors.BrandBlue),
+                                enabled = email.isNotBlank() && password.isNotBlank() && !state.isLoading
+                            ) {
+                                if (state.isLoading) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(24.dp),
+                                        color = Color.White,
+                                        strokeWidth = 2.dp
+                                    )
+                                } else {
+                                    Text("Se connecter", fontWeight = FontWeight.Bold)
+                                }
+                            }
+
+                            val context = LocalContext.current
+                            val canUseBiometric by viewModel.canUseBiometric.collectAsState()
+
+                            if (canUseBiometric && BiometricHelper.isBiometricAvailable(context)) {
+                                IconButton(
+                                    onClick = {
+                                        val activity = context as? FragmentActivity
+                                        if (activity != null) {
+                                            BiometricHelper.showBiometricPrompt(
+                                                activity = activity,
+                                                onSuccess = { viewModel.loginWithBiometric() },
+                                                onError = { code, msg -> /* Handle error */ },
+                                                onFailed = { /* Handle failure */ }
+                                            )
+                                        }
+                                    },
+                                    modifier = Modifier
+                                        .size(52.dp)
+                                        .background(AppColors.BrandBlue.copy(alpha = 0.1f), AppShapes.MediumRadius)
+                                ) {
+                                    Icon(
+                                        Icons.Rounded.Fingerprint,
+                                        contentDescription = "Biométrie",
+                                        tint = AppColors.BrandBlue,
+                                        modifier = Modifier.size(28.dp)
+                                    )
+                                }
                             }
                         }
                     }

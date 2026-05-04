@@ -25,5 +25,7 @@ data class PersonneChargeDto(
     var photo: String? = "",
     var photoRecto: String? = "",
     var photoVerso: String? = "",
-    val matricule: String? = null
+    @SerializedName("matricule")
+    val matricule: String? = null,
+    val createdAt: String? = null
 )

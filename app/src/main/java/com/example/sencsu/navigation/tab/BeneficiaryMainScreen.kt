@@ -11,10 +11,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.example.sencsu.navigation.Screen
 import com.example.sencsu.screen.*
 import com.example.sencsu.theme.AppColors
@@ -49,20 +51,45 @@ fun BeneficiaryMainScreen(rootNavController: NavController) {
             exitTransition = { fadeOut(tween(250)) }
         ) {
             composable(BottomNavItem.Home.route) {
-                BeneficiaryDashboardScreen()
+                BeneficiaryDashboardScreen(
+                    onNavigateToHistory = { adherentId ->
+                        nestedNavController.navigate(Screen.MedicalHistory.createRoute(adherentId))
+                    }
+                )
+            }
+            composable(
+                route = Screen.MedicalHistory.route,
+                arguments = listOf(
+                    navArgument("adherentId") { type = NavType.StringType },
+                    navArgument("pcId") { 
+                        type = NavType.StringType
+                        nullable = true
+                        defaultValue = null
+                    },
+                    navArgument("pcName") {
+                        type = NavType.StringType
+                        nullable = true
+                        defaultValue = null
+                    }
+                )
+            ) {
+                MedicalHistoryScreen(
+                    onBack = { nestedNavController.popBackStack() }
+                )
             }
             composable(BottomNavItem.Dependents.route) {
-                // Ici on pourrait avoir un écran spécifique ou filtrer DependentsScreen
-                DependentsScreen() 
+                DependentsScreen(
+                    onNavigateToHistory = { adherentId, pcId, pcName ->
+                        nestedNavController.navigate(Screen.MedicalHistory.createRoute(adherentId, pcId, pcName))
+                    }
+                ) 
             }
-            composable(BottomNavItem.Renewal.route) {
-                RenewalScreen(onFinish = { nestedNavController.navigate(BottomNavItem.Home.route) })
-            }
-            composable(BottomNavItem.Documents.route) {
-                DocumentsScreen()
-            }
+
             composable(BottomNavItem.Profile.route) {
                 ProfileScreen(
+                    onNavigateToHistory = { adherentId ->
+                        nestedNavController.navigate(Screen.MedicalHistory.createRoute(adherentId))
+                    },
                     onLogout = {
                         rootNavController.navigate(Screen.BeneficiaryLogin.route) {
                             popUpTo(0) { inclusive = true }

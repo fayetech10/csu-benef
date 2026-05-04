@@ -6,7 +6,7 @@ package com.example.sencsu.configs
  */
 object ApiConfig {
     // ── URL du backend local ──
-    const val BASE_URL = "http://192.168.1.21:8080/"
+    const val BASE_URL = "http://192.168.1.17:8080/"
 
     private const val FILES_ENDPOINT = "api/files/"
     private const val QR_CODE_ENDPOINT = "api/adherents/qr/"
@@ -25,6 +25,7 @@ object ApiConfig {
 
     fun getQrCodeUrl(matricule: String?): String? {
         if (matricule.isNullOrBlank()) return null
-        return "${BASE_URL}${QR_CODE_ENDPOINT}${matricule}"
+        val encodedMatricule = java.net.URLEncoder.encode(matricule, "UTF-8")
+        return "${BASE_URL}${QR_CODE_ENDPOINT}${encodedMatricule}"
     }
 }

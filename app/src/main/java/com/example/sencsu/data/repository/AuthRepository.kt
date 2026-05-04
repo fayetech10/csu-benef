@@ -1,85 +1,54 @@
 package com.example.sencsu.data.repository
 
-import android.util.Log
 import com.example.sencsu.data.remote.ApiService
 import com.example.sencsu.data.remote.dto.LoginRequest
 import com.example.sencsu.data.remote.dto.LoginResponse
-import javax.inject.Inject
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-
 import com.example.sencsu.domain.repository.IAuthRepository
+import javax.inject.Inject
+import javax.inject.Singleton
 
 /**
- * Repository d'authentification.
- * Utilise Retrofit (apiService) pour appeler le backend via /api/agent/login.
- * L'URL est centralisée dans ApiConfig.BASE_URL.
+ * Repository gérant l'authentification des agents et des adhérents.
+ * Centralise les appels vers l'API d'authentification.
  */
+@Singleton
 class AuthRepository @Inject constructor(
     private val apiService: ApiService
-) : IAuthRepository {
+) : BaseRepository(), IAuthRepository {
 
-    override suspend fun login(email: String, password: String): LoginResponse = withContext(Dispatchers.IO) {
-        try {
+    override suspend fun login(email: String, password: String): LoginResponse {
+        val result = safeApiCall {
             val apiResponse = apiService.login(LoginRequest(email, password))
-
-            Log.d("AuthRepository", "Login response: success=${apiResponse.success}, message=${apiResponse.message}")
-
             if (!apiResponse.success || apiResponse.data == null) {
-                throw Exception(apiResponse.message ?: "Échec de la connexion")
+                throw Exception(apiResponse.message ?: "Identifiants incorrects")
             }
-
-            val loginData = apiResponse.data
-
-            // Mapper vers un LoginResponse propre
+            val data = apiResponse.data
             LoginResponse(
-                accessToken = loginData.accessToken,
-                refreshToken = loginData.refreshToken,
-                tokenType = loginData.tokenType ?: "Bearer",
-                expiresIn = loginData.expiresIn ?: 0L,
-                user = loginData.user
+                accessToken = data.accessToken,
+                refreshToken = data.refreshToken,
+                tokenType = data.tokenType ?: "Bearer",
+                expiresIn = data.expiresIn ?: 0L,
+                user = data.user
             )
-        } catch (e: retrofit2.HttpException) {
-            handleAuthError(e)
-        } catch (e: java.io.IOException) {
-            throw Exception("Impossible de se connecter au serveur. Vérifiez votre connexion.")
-        } catch (e: Exception) {
-            throw e
         }
+        return result.getOrThrow()
     }
 
-    override suspend fun adherentLogin(matricule: String, password: String): LoginResponse = withContext(Dispatchers.IO) {
-        try {
+    override suspend fun adherentLogin(matricule: String, password: String): LoginResponse {
+        val result = safeApiCall {
             val apiResponse = apiService.adherentLogin(LoginRequest(matricule, password))
             if (!apiResponse.success || apiResponse.data == null) {
-                throw Exception(apiResponse.message ?: "Échec de la connexion")
+                throw Exception(apiResponse.message ?: "Matricule ou mot de passe incorrect")
             }
-            val loginData = apiResponse.data
+            val data = apiResponse.data
             LoginResponse(
-                accessToken = loginData.accessToken,
-                refreshToken = loginData.refreshToken,
-                tokenType = loginData.tokenType ?: "Bearer",
-                expiresIn = loginData.expiresIn ?: 0L,
-                user = loginData.user
+                accessToken = data.accessToken,
+                refreshToken = data.refreshToken,
+                tokenType = data.tokenType ?: "Bearer",
+                expiresIn = data.expiresIn ?: 0L,
+                user = data.user
             )
-        } catch (e: retrofit2.HttpException) {
-            handleAuthError(e)
-        } catch (e: java.io.IOException) {
-            throw Exception("Impossible de se connecter au serveur. Vérifiez votre connexion.")
-        } catch (e: Exception) {
-            throw e
         }
-    }
-
-    private fun handleAuthError(e: retrofit2.HttpException): Nothing {
-        val errorBody = e.response()?.errorBody()?.string()
-        Log.e("AuthRepository", "Auth HTTP error ${e.code()}: $errorBody")
-        val errorMessage = when (e.code()) {
-            401 -> "Matricule ou mot de passe incorrect"
-            403 -> "Compte désactivé"
-            404 -> "Compte non trouvé"
-            else -> "Erreur serveur (${e.code()})"
-        }
-        throw Exception(errorMessage)
+        return result.getOrThrow()
     }
 }

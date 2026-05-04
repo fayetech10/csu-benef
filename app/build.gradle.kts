@@ -66,6 +66,7 @@ dependencies {
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.biometric)
 
     // Compose (Material 3 & Icons)
     implementation(platform(libs.androidx.compose.bom))
@@ -97,6 +98,15 @@ dependencies {
 
     // ML Kit & OCR
     implementation("com.google.mlkit:text-recognition:16.0.0")
+    implementation("com.google.mlkit:barcode-scanning:17.2.0")
+    
+    // CameraX
+    val camerax_version = "1.3.1"
+    implementation("androidx.camera:camera-core:$camerax_version")
+    implementation("androidx.camera:camera-camera2:$camerax_version")
+    implementation("androidx.camera:camera-lifecycle:$camerax_version")
+    implementation("androidx.camera:camera-view:$camerax_version")
+    implementation("androidx.camera:camera-extensions:$camerax_version")
     implementation("com.google.mlkit:common:18.10.0")
     implementation("com.google.mlkit:segmentation-selfie:16.0.0-beta4")
 

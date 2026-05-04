@@ -24,6 +24,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.SubcomposeAsyncImage
+import coil.request.ImageRequest
+import androidx.compose.ui.platform.LocalContext
 import com.example.sencsu.configs.ApiConfig
 import com.example.sencsu.data.remote.dto.PersonneChargeDto
 import com.example.sencsu.domain.viewmodel.BeneficiaryDashboardViewModel
@@ -34,10 +36,14 @@ import kotlinx.coroutines.delay
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DependentsScreen(
+    onNavigateToHistory: (String, String, String) -> Unit = { _, _, _ -> },
     viewModel: BeneficiaryDashboardViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val personnesCharge = uiState.adherent?.personnesCharge ?: emptyList()
+    val token by viewModel.sessionManager.tokenFlow.collectAsState(initial = null)
+    val context = LocalContext.current
+    val adherent = uiState.adherent
+    val personnesCharge = adherent?.personnesCharge ?: emptyList()
     var showContent by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
@@ -132,7 +138,17 @@ fun DependentsScreen(
                                 },
                                 onDelete = {
                                     showDeleteConfirm = pc
-                                }
+                                },
+                                onMedicalHistory = {
+                                    adherent?.id?.let { adherentId ->
+                                        pc.id?.let { pcId ->
+                                            val fullName = "${pc.prenoms ?: ""} ${pc.nom ?: ""}".trim()
+                                            onNavigateToHistory(adherentId, pcId, fullName)
+                                        }
+                                    }
+                                },
+                                token = token,
+                                context = context
                             )
                         }
                     }
@@ -253,7 +269,10 @@ private fun FamilySummaryCard(dependants: List<PersonneChargeDto>) {
 private fun DependentDetailCard(
     pc: PersonneChargeDto,
     onEdit: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onMedicalHistory: () -> Unit,
+    token: String?,
+    context: android.content.Context
 ) {
     val name = "${pc.prenoms ?: ""} ${pc.nom ?: ""}".trim().ifEmpty { "Inconnu" }
     val initials = name.split(" ")
@@ -318,6 +337,9 @@ private fun DependentDetailCard(
 
                 // Actions
                 Row {
+                    IconButton(onClick = onMedicalHistory) {
+                        Icon(Icons.Rounded.MedicalServices, null, tint = AppColors.BrandBlue, modifier = Modifier.size(20.dp))
+                    }
                     IconButton(onClick = onEdit) {
                         Icon(Icons.Rounded.Edit, null, tint = AppColors.BrandBlue, modifier = Modifier.size(20.dp))
                     }
@@ -344,7 +366,10 @@ private fun DependentDetailCard(
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             SubcomposeAsyncImage(
-                                model = ApiConfig.getQrCodeUrl(pc.matricule),
+                                model = ImageRequest.Builder(context)
+                                    .data(ApiConfig.getQrCodeUrl(pc.matricule))
+                                    .apply { token?.let { addHeader("Authorization", "Bearer $it") } }
+                                    .build(),
                                 contentDescription = "QR",
                                 modifier = Modifier.padding(2.dp),
                                 loading = { CircularProgressIndicator(modifier = Modifier.size(8.dp), strokeWidth = 1.dp) }
