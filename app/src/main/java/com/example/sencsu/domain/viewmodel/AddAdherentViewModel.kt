@@ -40,6 +40,11 @@ sealed class AddAdherentUiEvent {
     object NavigateBack : AddAdherentUiEvent()
 }
 
+enum class FormType {
+    ADHERENT,
+    PERSONNE_CHARGE
+}
+
 /**
  * État UI pour le formulaire d'ajout/modification d'adhérent
  */
@@ -67,6 +72,7 @@ data class AddAdherentUiState(
     val typeBenef: String = "CLASSIQUE",
     val typeAdhesion: String = "FAMALE",
     val adresse: String = "",
+    val lienParent: String = "",                  // Pour les Personnes à Charge
 
     // ── Photos Adhérent Principal ──
     val photoUri: Uri? = null,                    // Nouvelle photo (local)
@@ -93,7 +99,10 @@ data class AddAdherentUiState(
     // ── État Global ──
     val isLoading: Boolean = false,
     val totalCost: Int = ADHERENT_PRICE,
-    val validationErrors: Map<String, String> = emptyMap()
+    val validationErrors: Map<String, String> = emptyMap(),
+    val formType: FormType = FormType.ADHERENT,
+    val pcId: String? = null,                      // ID de la personne à charge si mode PC
+    val isEditMode: Boolean = false               // Mode édition actif
 )
 
 @HiltViewModel
@@ -111,8 +120,7 @@ class AddAdherentViewModel @Inject constructor(
     val uiEvent = _uiEvent.receiveAsFlow()
 
     // ── Edit mode support ──────────────────────────────────────────────
-    var isEditMode: Boolean = false
-        private set
+    val isEditMode: Boolean get() = _uiState.value.isEditMode
     var editAdherentId: String? = null
         private set
 
@@ -121,7 +129,7 @@ class AddAdherentViewModel @Inject constructor(
      */
     fun fetchAndLoadForEdit(id: String) {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
+            _uiState.update { it.copy(isLoading = true, formType = FormType.ADHERENT) }
             try {
                 adherentRepo.getAdherentById(id)
                     .onSuccess { adherent -> loadAdherentForEdit(adherent) }
@@ -137,14 +145,69 @@ class AddAdherentViewModel @Inject constructor(
     }
 
     /**
+     * Récupère une personne à charge et prépare le formulaire pour l'édition
+     */
+    fun fetchAndLoadDependentForEdit(adherentId: String, pcId: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, formType = FormType.PERSONNE_CHARGE, pcId = pcId) }
+            try {
+                adherentRepo.getAdherentById(adherentId)
+                    .onSuccess { adherent ->
+                        val pc = adherent.personnesCharge.find { it.id == pcId }
+                        if (pc != null) {
+                            loadDependentForEdit(adherentId, pc)
+                        } else {
+                            _uiEvent.send(AddAdherentUiEvent.ShowSnackbar("Bénéficiaire introuvable"))
+                        }
+                    }
+                    .onFailure { e ->
+                        _uiEvent.send(AddAdherentUiEvent.ShowSnackbar("Erreur: ${e.message}"))
+                    }
+            } finally {
+                _uiState.update { it.copy(isLoading = false) }
+            }
+        }
+    }
+
+    private fun loadDependentForEdit(adherentId: String, pc: PersonneChargeDto) {
+        editAdherentId = adherentId
+        _uiState.update {
+            it.copy(
+                isEditMode = true,
+                formType = FormType.PERSONNE_CHARGE,
+                pcId = pc.id,
+                prenoms = pc.prenoms ?: "",
+                nom = pc.nom ?: "",
+                dateNaissance = pc.dateNaissance ?: "",
+                lieuNaissance = pc.lieuNaissance ?: "",
+                sexe = pc.sexe ?: "M",
+                situationMatrimoniale = pc.situationM ?: "",
+                whatsapp = pc.whatsapp ?: "",
+                adresse = pc.adresse ?: "",
+                lienParent = pc.lienParent ?: "",
+                numeroCNI = pc.numeroCNi ?: "",
+                numeroExtrait = pc.numeroExtrait ?: "",
+                typePiece = pc.typePiece ?: "CNI",
+                existingPhotoUrl = pc.photo,
+                existingRectoUrl = pc.photoRecto,
+                existingVersoUrl = pc.photoVerso,
+                photoUri = null,
+                rectoUri = null,
+                versoUri = null,
+                dependants = emptyList() // Pas de dépendants pour une PC
+            )
+        }
+    }
+
+    /**
      * Remplit le formulaire avec les données d'un adhérent existant pour l'édition
-     * ⚠️ IMPORTANT: Les URLs serveur sont conservées séparément des URIs locales
      */
     fun loadAdherentForEdit(adherent: AdherentDto) {
-        isEditMode = true
         editAdherentId = adherent.id
         _uiState.update {
             it.copy(
+                isEditMode = true,
+                formType = FormType.ADHERENT,
                 prenoms = adherent.prenoms ?: "",
                 nom = adherent.nom ?: "",
                 adresse = adherent.adresse ?: "",
@@ -162,18 +225,12 @@ class AddAdherentViewModel @Inject constructor(
                 regime = adherent.regime ?: "CONTRIBUTIF",
                 typeBenef = adherent.typeBenef ?: "CLASSIQUE",
                 typeAdhesion = adherent.typeAdhesion ?: "FAMALE",
-
-                // ✅ Conserver les URLs serveur EXISTANTES
                 existingPhotoUrl = adherent.photo,
                 existingRectoUrl = adherent.photoRecto,
                 existingVersoUrl = adherent.photoVerso,
-
-                // ✅ Les URIs locales restent à null jusqu'à une nouvelle sélection
                 photoUri = null,
                 rectoUri = null,
                 versoUri = null,
-
-                // ✅ Charger les dépendants
                 dependants = adherent.personnesCharge,
                 totalCost = calculateTotalCost(adherent.personnesCharge.size)
             )
@@ -181,7 +238,7 @@ class AddAdherentViewModel @Inject constructor(
     }
 
     // ─────────────────────────────────────────────────────────────────
-    // ── MISES À JOUR DES CHAMPS ADHÉRENT
+    // ── MISES À JOUR DES CHAMPS
     // ─────────────────────────────────────────────────────────────────
 
     fun updatePrenoms(value: String) = _uiState.update {
@@ -232,37 +289,25 @@ class AddAdherentViewModel @Inject constructor(
     }
 
     fun updateDepartement(value: String) = _uiState.update { it.copy(departement = value) }
-
-    fun updateCommune(value: String) = _uiState.update {
-        it.copy(commune = value, validationErrors = it.validationErrors - "commune")
-    }
-
+    fun updateCommune(value: String) = _uiState.update { it.copy(commune = value, validationErrors = it.validationErrors - "commune") }
     fun updateRegion(value: String) = _uiState.update { it.copy(region = value) }
     fun updateRegime(value: String) = _uiState.update { it.copy(regime = value) }
     fun updateTypeBenef(value: String) = _uiState.update { it.copy(typeBenef = value) }
     fun updateTypeAdhesion(value: String) = _uiState.update { it.copy(typeAdhesion = value) }
+    fun updateLienParent(value: String) = _uiState.update { it.copy(lienParent = value) }
 
     // ─────────────────────────────────────────────────────────────────
-    // ── GESTION DES PHOTOS ADHÉRENT PRINCIPAL
+    // ── GESTION DES PHOTOS
     // ─────────────────────────────────────────────────────────────────
 
-    /**
-     * ✅ Mise à jour photo principale
-     * - Accepte une nouvelle URI locale
-     * - Invalide l'URL serveur existante si une nouvelle image est sélectionnée
-     */
     fun updatePhotoUri(uri: Uri?) = _uiState.update {
         it.copy(
             photoUri = uri,
-            // ✅ Si une nouvelle photo est sélectionnée, on ignore l'ancienne URL serveur
             existingPhotoUrl = if (uri != null) null else it.existingPhotoUrl,
             validationErrors = it.validationErrors - "photoUri"
         )
     }
 
-    /**
-     * ✅ Mise à jour recto CNI
-     */
     fun updateRectoUri(uri: Uri?) = _uiState.update {
         it.copy(
             rectoUri = uri,
@@ -270,19 +315,12 @@ class AddAdherentViewModel @Inject constructor(
         )
     }
 
-    /**
-     * ✅ Mise à jour verso CNI
-     */
     fun updateVersoUri(uri: Uri?) = _uiState.update {
         it.copy(
             versoUri = uri,
             existingVersoUrl = if (uri != null) null else it.existingVersoUrl
         )
     }
-
-    // ─────────────────────────────────────────────────────────────────
-    // ── GESTION DES PHOTOS PERSONNES À CHARGE (MODAL)
-    // ─────────────────────────────────────────────────────────────────
 
     fun updateCurrentDependant(dependant: PersonneChargeDto) {
         _uiState.update { it.copy(currentDependant = dependant) }
@@ -301,23 +339,17 @@ class AddAdherentViewModel @Inject constructor(
     }
 
     // ─────────────────────────────────────────────────────────────────
-    // ── SOUMISSION DU FORMULAIRE
+    // ── SOUMISSION
     // ─────────────────────────────────────────────────────────────────
 
-    /**
-     * ✅ Soumission en MODE CRÉATION (ajout d'un nouvel adhérent)
-     */
     fun submitWithUpload(context: Context) {
-
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
-
             try {
                 val state = _uiState.value
                 val total = calculateTotalCost(state.dependants.size)
                 val numeroPieceFinale = if (state.typePiece == "CNI") state.numeroCNI else state.numeroExtrait
 
-                // 1️⃣ Sauvegarde locale dans Room (Offline-First)
                 val localUuid = UUID.randomUUID().toString()
                 val entity = AdherentEntity(
                     prenoms = state.prenoms,
@@ -348,139 +380,82 @@ class AddAdherentViewModel @Inject constructor(
                 )
                 val localId = adherentDao.insertAdherent(entity)
 
-                // 2️⃣ Tentative de synchronisation API
                 try {
-                    // Upload des images
                     val photoUrl = state.photoUri?.let { uploadImage(context, it) }
                     val rectoUrl = state.rectoUri?.let { uploadImage(context, it) }
                     val versoUrl = state.versoUri?.let { uploadImage(context, it) }
-
-                    // Upload des images des dépendants
                     val updatedDeps = uploadDependantsImages(context, state.dependants)
 
-                    // Préparation du DTO
-                    val adherentDto = buildAdherentDto(
-                        photoUrl = photoUrl,
-                        rectoUrl = rectoUrl,
-                        versoUrl = versoUrl,
-                        updatedDependants = updatedDeps,
-                        clientUUID = localUuid
-                    )
+                    val adherentDto = buildAdherentDto(photoUrl, rectoUrl, versoUrl, updatedDeps, localUuid)
 
-                    // Appel API
                     adherentRepository.ajouterAdherent(adherentDto)
                         .onSuccess { idResponse ->
                             adherentDao.markAsSynced(localId, idResponse.adherentId)
-                            _uiEvent.send(AddAdherentUiEvent.ShowSnackbar("Adhérent ajouté avec succès !"))
-                            _uiEvent.send(
-                                AddAdherentUiEvent.NavigateToPasswordUpdate(
-                                    idResponse.adherentId,
-                                    idResponse.matricule ?: "Inconnu",
-                                    idResponse.defaultPassword ?: "acmu00"
-                                )
-                            )
+                            _uiEvent.send(AddAdherentUiEvent.ShowSnackbar("Adhérent ajouté !"))
+                            _uiEvent.send(AddAdherentUiEvent.NavigateToPasswordUpdate(idResponse.adherentId, idResponse.matricule ?: "Inconnu", idResponse.defaultPassword ?: "acmu00"))
                             resetForm()
                         }
                         .onFailure { throw it }
-
-                } catch (e: HttpException) {
-                    handleHttpException(e, localId)
-                } catch (e: IOException) {
-                    Log.e("SubmitError", "Mode hors ligne", e)
-                    _uiEvent.send(AddAdherentUiEvent.ShowSnackbar("Enregistré localement (hors ligne)"))
-                    _uiEvent.send(AddAdherentUiEvent.NavigateToPayment(null, localId, total))
-                    resetForm()
                 } catch (e: Exception) {
-                    Log.e("SubmitError", "Erreur inattendue", e)
-                    adherentDao.deleteByLocalId(localId)
-                    _uiEvent.send(AddAdherentUiEvent.ShowSnackbar(e.message ?: "Erreur inattendue"))
+                    handleHttpException(e as? HttpException ?: throw e, localId)
                 }
+            } catch (e: Exception) {
+                _uiEvent.send(AddAdherentUiEvent.ShowSnackbar(e.message ?: "Erreur"))
             } finally {
                 _uiState.update { it.copy(isLoading = false) }
             }
         }
     }
 
-    /**
-     * ✅ SOUMISSION EN MODE ÉDITION (modification d'un adhérent existant)
-     *
-     * Points clés:
-     * - Les images locales (photoUri, rectoUri, versoUri) sont uploadées
-     * - Les images serveur existantes sont conservées si pas de nouvelle sélection
-     * - Synchronisation complète avec le backend
-     */
     @RequiresApi(Build.VERSION_CODES.O)
     fun submitEdit(context: Context) {
         val id = editAdherentId ?: return
-
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             try {
                 val state = _uiState.value
-                val numeroPieceFinale = if (state.typePiece == "CNI") state.numeroCNI else state.numeroExtrait
+                val photoUrl = if (state.photoUri != null) uploadImage(context, state.photoUri) else state.existingPhotoUrl
+                val rectoUrl = if (state.rectoUri != null) uploadImage(context, state.rectoUri) else state.existingRectoUrl
+                val versoUrl = if (state.versoUri != null) uploadImage(context, state.versoUri) else state.existingVersoUrl
 
-                // ✅ Traitement intelligent des photos:
-                // - Si nouvelle URI locale → upload
-                // - Sinon → garder l'URL serveur existante
-                val photoUrl = when {
-                    state.photoUri != null -> uploadImage(context, state.photoUri)
-                    else -> state.existingPhotoUrl
+                val result = if (state.formType == FormType.ADHERENT) {
+                    val updatedDeps = uploadDependantsImages(context, state.dependants)
+                    val dto = AdherentUpdateDto(
+                        nom = state.nom, prenoms = state.prenoms, adresse = state.adresse,
+                        lieuNaissance = state.lieuNaissance, sexe = state.sexe,
+                        dateNaissance = Formatters.formatDateForAPI(state.dateNaissance),
+                        situationMatrimoniale = state.situationMatrimoniale, whatsapp = state.whatsapp,
+                        secteurActivite = state.secteurActivite, region = state.region,
+                        departement = state.departement, commune = state.commune,
+                        regime = state.regime, typeBenef = state.typeBenef,
+                        typeAdhesion = state.typeAdhesion, photo = photoUrl,
+                        photoRecto = rectoUrl, photoVerso = versoUrl,
+                        personnesCharge = updatedDeps, typePiece = state.typePiece,
+                        numeroPiece = if (state.typePiece == "CNI") state.numeroCNI else state.numeroExtrait,
+                        numeroCNi = if (state.typePiece == "CNI") state.numeroCNI else state.numeroExtrait
+                    )
+                    adherentRepo.updateAdherent(id, dto)
+                } else {
+                    val pcDto = PersonneChargeDto(
+                        id = state.pcId, nom = state.nom, prenoms = state.prenoms,
+                        dateNaissance = Formatters.formatDateForAPI(state.dateNaissance),
+                        lieuNaissance = state.lieuNaissance, sexe = state.sexe,
+                        situationM = state.situationMatrimoniale, lienParent = state.lienParent,
+                        whatsapp = state.whatsapp, adresse = state.adresse,
+                        typePiece = state.typePiece,
+                        numeroCNi = if (state.typePiece == "CNI") state.numeroCNI else null,
+                        numeroExtrait = if (state.typePiece == "EXTRAIT") state.numeroExtrait else null,
+                        photo = photoUrl, photoRecto = rectoUrl, photoVerso = versoUrl
+                    )
+                    adherentRepo.updatePersonneCharge(id, state.pcId!!, pcDto)
                 }
 
-                val rectoUrl = when {
-                    state.rectoUri != null -> uploadImage(context, state.rectoUri)
-                    else -> state.existingRectoUrl
-                }
-
-                val versoUrl = when {
-                    state.versoUri != null -> uploadImage(context, state.versoUri)
-                    else -> state.existingVersoUrl
-                }
-
-                // Upload des photos des dépendants
-                val updatedDeps = uploadDependantsImages(context, state.dependants)
-
-                // Préparation du DTO de modification
-                val dto = AdherentUpdateDto(
-                    nom = state.nom,
-                    prenoms = state.prenoms,
-                    adresse = state.adresse,
-                    lieuNaissance = state.lieuNaissance,
-                    sexe = state.sexe,
-                    dateNaissance = Formatters.formatDateForAPI(state.dateNaissance),
-                    situationMatrimoniale = state.situationMatrimoniale,
-                    whatsapp = state.whatsapp,
-                    secteurActivite = state.secteurActivite,
-                    region = state.region,
-                    departement = state.departement,
-                    commune = state.commune,
-                    regime = state.regime,
-                    typeBenef = state.typeBenef,
-                    typeAdhesion = state.typeAdhesion,
-                    photo = photoUrl,
-                    photoRecto = rectoUrl,
-                    photoVerso = versoUrl,
-                    personnesCharge = updatedDeps,
-                    typePiece = state.typePiece,
-                    numeroPiece = numeroPieceFinale,
-                    numeroCNi = numeroPieceFinale
-                )
-
-                // Appel API de modification
-                adherentRepository.updateAdherent(id, dto)
-                    .onSuccess {
-                        _uiEvent.send(AddAdherentUiEvent.ShowSnackbar("Adhérent mis à jour avec succès !"))
-                        _uiEvent.send(AddAdherentUiEvent.NavigateBack)
-                        resetForm()
-                    }
-                    .onFailure { e ->
-                        Log.e("SubmitEdit", "Erreur modification", e)
-                        _uiEvent.send(
-                            AddAdherentUiEvent.ShowSnackbar(e.message ?: "Erreur lors de la mise à jour")
-                        )
-                    }
+                result.onSuccess {
+                    _uiEvent.send(AddAdherentUiEvent.ShowSnackbar(if (state.formType == FormType.ADHERENT) "Adhérent mis à jour !" else "Bénéficiaire mis à jour !"))
+                    _uiEvent.send(AddAdherentUiEvent.NavigateBack)
+                    resetForm()
+                }.onFailure { throw it }
             } catch (e: Exception) {
-                Log.e("SubmitEdit", "Erreur inattendue", e)
                 sendError(e)
             } finally {
                 _uiState.update { it.copy(isLoading = false) }
@@ -488,32 +463,9 @@ class AddAdherentViewModel @Inject constructor(
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────
-    // ── FONCTIONS UTILITAIRES POUR UPLOAD
-    // ─────────────────────────────────────────────────────────────────
+    private suspend fun uploadImage(context: Context, uri: Uri): String? = fileRepository.uploadImage(context, uri).getOrNull()
 
-    /**
-     * ✅ Upload une image et retourne l'URL serveur
-     */
-    private suspend fun uploadImage(context: Context, uri: Uri): String? {
-        return try {
-            fileRepository.uploadImage(context, uri).getOrNull()
-        } catch (e: Exception) {
-            Log.e("ImageUpload", "Erreur upload image", e)
-            null
-        }
-    }
-
-    /**
-     * ✅ Upload les images des dépendants
-     * Traite intelligemment:
-     * - URIs locales (content://) → upload
-     * - URLs serveur (http://) → conservation
-     */
-    private suspend fun uploadDependantsImages(
-        context: Context,
-        dependants: List<PersonneChargeDto>
-    ): List<PersonneChargeDto> {
+    private suspend fun uploadDependantsImages(context: Context, dependants: List<PersonneChargeDto>): List<PersonneChargeDto> {
         return dependants.map { dep ->
             dep.copy(
                 photo = processImageUri(context, dep.photo),
@@ -523,121 +475,48 @@ class AddAdherentViewModel @Inject constructor(
         }
     }
 
-    /**
-     * ✅ Traite une URI/URL d'image:
-     * - Si c'est une URI locale (content://) → upload et retourne URL serveur
-     * - Si c'est déjà une URL serveur → la retourne telle quelle
-     * - Sinon → retourne null
-     */
     private suspend fun processImageUri(context: Context, uriString: String?): String? {
         return when {
-            uriString?.startsWith("content://") == true -> {
-                uploadImage(context, Uri.parse(uriString))
-            }
-            uriString?.startsWith("http") == true -> {
-                uriString // Garder l'URL serveur
-            }
+            uriString?.startsWith("content://") == true -> uploadImage(context, Uri.parse(uriString))
+            uriString?.startsWith("http") == true -> uriString
             else -> null
         }
     }
 
-    /**
-     * ✅ Construit le DTO pour la création d'adhérent
-     */
-    private fun buildAdherentDto(
-        photoUrl: String?,
-        rectoUrl: String?,
-        versoUrl: String?,
-        updatedDependants: List<PersonneChargeDto>,
-        clientUUID: String
-    ): AdherentDto {
+    private fun buildAdherentDto(photoUrl: String?, rectoUrl: String?, versoUrl: String?, updatedDependants: List<PersonneChargeDto>, localUuid: String): AdherentDto {
         val state = _uiState.value
-        val numeroPieceFinale = if (state.typePiece == "CNI") state.numeroCNI else state.numeroExtrait
-
         return AdherentDto(
-            prenoms = state.prenoms,
-            nom = state.nom,
-            adresse = state.adresse,
-            lieuNaissance = state.lieuNaissance,
-            sexe = state.sexe,
+            prenoms = state.prenoms, nom = state.nom, adresse = state.adresse,
+            lieuNaissance = state.lieuNaissance, sexe = state.sexe,
             dateNaissance = Formatters.formatDateForApi(state.dateNaissance),
-            situationM = state.situationMatrimoniale,
-            whatsapp = state.whatsapp,
-            secteurActivite = state.secteurActivite,
-            typePiece = state.typePiece,
-            numeroPiece = numeroPieceFinale,
-            numeroCNi = numeroPieceFinale,
-            departement = state.departement,
-            commune = state.commune,
-            region = state.region,
-            regime = state.regime,
-            typeBenef = state.typeBenef,
-            typeAdhesion = state.typeAdhesion,
-            photo = photoUrl,
-            photoRecto = rectoUrl,
-            photoVerso = versoUrl,
-            clientUUID = clientUUID,
-            personnesCharge = updatedDependants.map { dep ->
-                dep.copy(
-                    dateNaissance = if (!dep.dateNaissance.isNullOrBlank()) {
-                        Formatters.formatDateForApi(dep.dateNaissance)
-                    } else dep.dateNaissance
-                )
-            }
+            situationM = state.situationMatrimoniale, whatsapp = state.whatsapp,
+            secteurActivite = state.secteurActivite, typePiece = state.typePiece,
+            numeroPiece = if (state.typePiece == "CNI") state.numeroCNI else state.numeroExtrait,
+            numeroCNi = if (state.typePiece == "CNI") state.numeroCNI else state.numeroExtrait,
+            departement = state.departement, commune = state.commune, region = state.region,
+            typeAdhesion = state.typeAdhesion, montantTotal = calculateTotalCost(state.dependants.size).toDouble(),
+            regime = state.regime, typeBenef = state.typeBenef,
+            photo = photoUrl, photoRecto = rectoUrl, photoVerso = versoUrl,
+            clientUUID = localUuid,
+            personnesCharge = updatedDependants.map { it.copy(dateNaissance = if (!it.dateNaissance.isNullOrBlank()) Formatters.formatDateForApi(it.dateNaissance) else it.dateNaissance) }
         )
     }
 
-    /**
-     * ✅ Gestion des erreurs HTTP
-     */
     private suspend fun handleHttpException(e: HttpException, localId: Long) {
-        Log.e("SubmitError", "Erreur API: ${e.code()}", e)
         adherentDao.deleteByLocalId(localId)
-
-        val errorBody = try {
-            e.response()?.errorBody()?.string()
-        } catch (ex: Exception) {
-            null
-        }
-        val message = errorBody ?: "Erreur serveur (${e.code()})"
-        _uiEvent.send(AddAdherentUiEvent.ShowSnackbar(message))
+        val msg = e.response()?.errorBody()?.string() ?: "Erreur serveur"
+        _uiEvent.send(AddAdherentUiEvent.ShowSnackbar(msg))
     }
 
-    // ─────────────────────────────────────────────────────────────────
-    // ── GESTION DES PERSONNES À CHARGE (MODAL)
-    // ─────────────────────────────────────────────────────────────────
-
-    fun showAddDependantModal() {
-        resetDependantForm()
-        _uiState.update { it.copy(isModalVisible = true, editingIndex = null) }
-    }
-
-    fun showEditDependantModal(index: Int, dependant: PersonneChargeDto) {
-        _uiState.update {
-            it.copy(
-                isModalVisible = true,
-                editingIndex = index,
-                currentDependant = dependant
-            )
-        }
-    }
-
+    fun showAddDependantModal() { resetDependantForm(); _uiState.update { it.copy(isModalVisible = true, editingIndex = null) } }
+    fun showEditDependantModal(index: Int, dependant: PersonneChargeDto) { _uiState.update { it.copy(isModalVisible = true, editingIndex = index, currentDependant = dependant) } }
     fun hideModal() = _uiState.update { it.copy(isModalVisible = false) }
 
     fun saveDependant() {
         _uiState.update { state ->
             val newList = state.dependants.toMutableList()
-            if (state.editingIndex != null) {
-                newList[state.editingIndex] = state.currentDependant
-            } else {
-                newList.add(state.currentDependant)
-            }
-            state.copy(
-                dependants = newList,
-                totalCost = calculateTotalCost(newList.size),
-                isModalVisible = false,
-                editingIndex = null
-            )
+            if (state.editingIndex != null) newList[state.editingIndex] = state.currentDependant else newList.add(state.currentDependant)
+            state.copy(dependants = newList, totalCost = calculateTotalCost(newList.size), isModalVisible = false, editingIndex = null)
         }
         resetDependantForm()
     }
@@ -646,34 +525,16 @@ class AddAdherentViewModel @Inject constructor(
         _uiState.update { state ->
             val newList = state.dependants.toMutableList()
             newList.removeAt(index)
-            state.copy(
-                dependants = newList,
-                totalCost = calculateTotalCost(newList.size)
-            )
+            state.copy(dependants = newList, totalCost = calculateTotalCost(newList.size))
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────
-    // ── RESETS & CALCULS
-    // ─────────────────────────────────────────────────────────────────
-
-    fun resetForm() {
-        isEditMode = false
-        editAdherentId = null
-        _uiState.value = AddAdherentUiState()
-    }
+    fun resetForm() { editAdherentId = null; _uiState.value = AddAdherentUiState() }
 
     private fun resetDependantForm() {
         _uiState.update {
             it.copy(
-                currentDependant = PersonneChargeDto(
-                    prenoms = "",
-                    nom = "",
-                    dateNaissance = "",
-                    sexe = "M",
-                    situationM = FormConstants.SITUATIONS.firstOrNull() ?: "",
-                    typePiece = "CNI"
-                ),
+                currentDependant = PersonneChargeDto(prenoms = "", nom = "", dateNaissance = "", sexe = "M", situationM = FormConstants.SITUATIONS.firstOrNull() ?: "", typePiece = "CNI"),
                 editingIndex = null
             )
         }
@@ -681,115 +542,45 @@ class AddAdherentViewModel @Inject constructor(
 
     private fun calculateTotalCost(count: Int): Int = ADHERENT_PRICE + (count * DEPENDANT_PRICE)
 
-    // ─────────────────────────────────────────────────────────────────
-    // ── VALIDATION DU FORMULAIRE
-    // ─────────────────────────────────────────────────────────────────
-
-    /**
-     * ✅ Validation par étape du formulaire
-     */
     fun validateStep(step: Int): Boolean {
         val errors = mutableMapOf<String, String>()
         val state = _uiState.value
-
         when (step) {
-            0 -> { // Identité
-                if (state.prenoms.isBlank()) errors["prenoms"] = "Le prénom est requis"
-                if (state.nom.isBlank()) errors["nom"] = "Le nom est requis"
-                if (state.dateNaissance.isBlank()) errors["dateNaissance"] = "La date de naissance est requise"
-                if (state.lieuNaissance.isBlank()) errors["lieuNaissance"] = "Le lieu de naissance est requis"
+            0 -> {
+                if (state.prenoms.isBlank()) errors["prenoms"] = "Prénom requis"
+                if (state.nom.isBlank()) errors["nom"] = "Nom requis"
+                if (state.dateNaissance.isBlank()) errors["dateNaissance"] = "Date naissance requise"
+                if (state.lieuNaissance.isBlank()) errors["lieuNaissance"] = "Lieu naissance requis"
             }
-            1 -> { // Contact & ID
-                val whatsappClean = state.whatsapp.replace(" ", "")
-                if (whatsappClean.isBlank()) {
-                    errors["whatsapp"] = "Le numéro WhatsApp est requis"
-                } else if (!whatsappClean.matches(Regex("^(70|75|76|77|78)\\d{7}$"))) {
-                    errors["whatsapp"] = "Numéro invalide (ex: 77 123 45 67)"
-                }
-
-                if (state.typePiece == "CNI") {
-                    if (state.numeroCNI.isBlank()) {
-                        errors["numeroCNI"] = "Le numéro CNI est requis"
-                    } else if (state.numeroCNI.length < 13) {
-                        errors["numeroCNI"] = "Le numéro CNI doit contenir au moins 13 chiffres"
-                    }
-                } else {
-                    if (state.numeroExtrait.isBlank()) errors["numeroExtrait"] = "Le numéro d'extrait est requis"
-                }
-                
-                if (state.secteurActivite.isBlank()) errors["secteurActivite"] = "Le secteur d'activité est requis"
-            }
-            2 -> { // Localisation
-                if (state.commune.isBlank()) errors["commune"] = "La commune est requise"
-                if (state.adresse.isBlank()) errors["adresse"] = "L'adresse est requise"
-            }
-            3 -> { // Photos
-                // En mode édition, la photo n'est pas obligatoire si elle existe déjà
-                if (!isEditMode) {
-                    if (state.photoUri == null && state.existingPhotoUrl.isNullOrBlank()) {
-                        errors["photoUri"] = "La photo d'identité est requise"
-                    }
-                } else {
-                    // En édition, au moins une photo doit exister
-                    if (state.photoUri == null && state.existingPhotoUrl.isNullOrBlank()) {
-                        errors["photoUri"] = "La photo d'identité est requise"
-                    }
-                }
+            1 -> {
+                if (state.whatsapp.isBlank()) errors["whatsapp"] = "WhatsApp requis"
+                if (state.typePiece == "CNI" && state.numeroCNI.length < 13) errors["numeroCNI"] = "CNI invalide"
             }
         }
-
-        if (errors.isNotEmpty()) {
-            _uiState.update { it.copy(validationErrors = errors) }
-            return false
-        }
-
-        _uiState.update { it.copy(validationErrors = emptyMap()) }
-        return true
+        if (errors.isNotEmpty()) { _uiState.update { it.copy(validationErrors = errors) }; return false }
+        _uiState.update { it.copy(validationErrors = emptyMap()) }; return true
     }
 
-    // ─────────────────────────────────────────────────────────────────
-    // ── GESTION DES ERREURS
-    // ─────────────────────────────────────────────────────────────────
-
-    private suspend fun sendError(exception: Exception) {
-        val errorMessage = when (exception) {
-            is HttpException -> {
-                try {
-                    exception.response()?.errorBody()?.string()
-                        ?: "Erreur serveur (${exception.code()})"
-                } catch (e: Exception) {
-                    "Erreur serveur (${exception.code()})"
-                }
-            }
-            is IOException -> "Problème de connexion internet."
-            else -> exception.localizedMessage ?: "Une erreur est survenue."
-        }
-
-        _uiEvent.send(AddAdherentUiEvent.ShowSnackbar(errorMessage))
+    private suspend fun sendError(e: Exception) {
+        val msg = if (e is HttpException) e.response()?.errorBody()?.string() ?: "Erreur ${e.code()}" else e.message ?: "Erreur"
+        _uiEvent.send(AddAdherentUiEvent.ShowSnackbar(msg))
     }
+
     fun updatePassword(adherentId: String, oldPassword: String, newPassword: String, onComplete: (Boolean, String?) -> Unit) {
         viewModelScope.launch {
             try {
                 _uiState.update { it.copy(isLoading = true) }
-                val response = adherentRepository.updatePassword(adherentId, oldPassword, newPassword)
+                val response = adherentRepo.updatePassword(adherentId, oldPassword, newPassword)
                 if (response.isSuccess) {
-                    viewModelScope.launch { 
-                        _uiEvent.send(AddAdherentUiEvent.ShowSnackbar("Mot de passe mis à jour !"))
-                    }
+                    _uiEvent.send(AddAdherentUiEvent.ShowSnackbar("Mot de passe mis à jour !"))
                     onComplete(true, null)
                 } else {
-                    val errorMsg = response.exceptionOrNull()?.message ?: "Erreur de mise à jour"
-                    viewModelScope.launch {
-                        _uiEvent.send(AddAdherentUiEvent.ShowSnackbar(errorMsg))
-                    }
+                    val errorMsg = response.exceptionOrNull()?.message ?: "Erreur"
+                    _uiEvent.send(AddAdherentUiEvent.ShowSnackbar(errorMsg))
                     onComplete(false, errorMsg)
                 }
             } catch (e: Exception) {
-                val msg = "Erreur inattendue: ${e.localizedMessage}"
-                viewModelScope.launch {
-                    _uiEvent.send(AddAdherentUiEvent.ShowSnackbar(msg))
-                }
-                onComplete(false, msg)
+                onComplete(false, e.message)
             } finally {
                 _uiState.update { it.copy(isLoading = false) }
             }

@@ -45,8 +45,18 @@
             android:theme="@style/Theme.SenCsu">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!-- Deep Link Filter (Schéma personnalisé dynamique) -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <!-- Support pour le schéma personnalisé qui ne dépend d'aucune adresse IP -->
+                <data
+                    android:scheme="sencsu"
+                    android:host="adherent" />
             </intent-filter>
         </activity>
     </application>

@@ -62,24 +62,36 @@ fun MainScreen(rootNavController: NavController) {
         NavHost(
             navController = nestedNavController,
             startDestination = BottomNavItem.Home.route,
-            modifier = Modifier.padding(top = padding.calculateTopPadding()),
+            modifier = Modifier.padding(
+                top = padding.calculateTopPadding(),
+                bottom = padding.calculateBottomPadding()
+            ),
             enterTransition = { fadeIn(tween(300)) },
             exitTransition = { fadeOut(tween(250)) }
         ) {
             composable(BottomNavItem.Home.route) {
-                DashboardScreen(rootNavController = rootNavController)
+                DashboardScreen(
+                    rootNavController = rootNavController,
+                    onNavigateToAdherents = { nestedNavController.navigate(BottomNavItem.Members.route) }
+                )
             }
-            composable(BottomNavItem.Dependents.route) {
-                DependentsScreen()
+            composable(BottomNavItem.Members.route) {
+                AdherentsListScreen(rootNavController = rootNavController)
             }
 
             composable(BottomNavItem.Profile.route) {
                 ProfileScreen(
+                    onNavigateToHistory = { id ->
+                        rootNavController.navigate(Screen.MedicalHistory.createRoute(id))
+                    },
+                    onNavigateToEdit = { id ->
+                        rootNavController.navigate(Screen.EditProfile.createRoute(id))
+                    },
                     onLogout = {
                         // 1. Effacer la session (DataStore + token cache HTTP)
                         appNavViewModel.logout()
                         // 2. Naviguer vers le login en vidant le backstack
-                        rootNavController.navigate(Screen.BeneficiaryLogin.route) {
+                        rootNavController.navigate(Screen.RoleSelection.route) {
                             popUpTo(0) { inclusive = true }
                         }
                     }
@@ -96,7 +108,7 @@ fun SubscriberBottomNavigation(
 ) {
     val items = listOf(
         BottomNavItem.Home,
-        BottomNavItem.Dependents,
+        BottomNavItem.Members,
         BottomNavItem.Profile
     )
 

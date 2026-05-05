@@ -5,6 +5,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -15,6 +16,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -23,6 +25,9 @@ import androidx.compose.ui.unit.sp
 import com.example.sencsu.components.forms.*
 import com.example.sencsu.data.remote.dto.FormConstants
 import com.example.sencsu.domain.viewmodel.AddAdherentViewModel
+import com.example.sencsu.theme.AppColors
+import com.example.sencsu.theme.AppShapes
+import com.example.sencsu.theme.AppGradients
 import com.example.sencsu.utils.Formatters
 
 // ==================== DESIGN TOKENS ====================
@@ -30,7 +35,7 @@ object ModalStyle {
     val Background = Color(0xFFFFFFFF)
     val SectionTitle = Color(0xFF64748B) // Slate 500
     val Divider = Color(0xFFE2E8F0)
-    val Primary = Color(0xFF0061FF)
+    val Primary = Color(0xFF08745F) // Harmonisé avec BrandBlue
     val Padding = 24.dp
     val Gap = 16.dp
 }
@@ -49,15 +54,12 @@ fun AddPersonneChargeModal(
         modifier = Modifier
             .fillMaxWidth()
             .background(ModalStyle.Background)
-            .padding(top = 16.dp) // Petit padding haut
     ) {
-        // 1. Header Fixe (Ne scrolle pas)
-        ModalHeader(
+        // 1. Header Premium avec Gradient
+        PremiumModalHeader(
             title = if (isEditing) "Modifier le bénéficiaire" else "Nouveau bénéficiaire",
             onClose = onCancel
         )
-
-        Divider(color = ModalStyle.Divider, thickness = 1.dp)
 
         // 2. Contenu Scrollable
         Column(
@@ -65,7 +67,7 @@ fun AddPersonneChargeModal(
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = ModalStyle.Padding, vertical = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp)
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
 
             // --- SECTION 1 : IDENTITÉ ---
@@ -181,7 +183,8 @@ fun AddPersonneChargeModal(
                 Text(
                     text = "Photos justificatives",
                     style = MaterialTheme.typography.labelMedium,
-                    color = ModalStyle.SectionTitle,
+                    color = AppColors.TextSub,
+                    fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(top = 8.dp)
                 )
 
@@ -209,37 +212,42 @@ fun AddPersonneChargeModal(
             }
         }
 
-        // 3. Footer d'actions (Fixe en bas)
+        // 3. Footer d'actions (Premium)
         Surface(
-            shadowElevation = 10.dp,
-            color = Color.White
+            shadowElevation = 16.dp,
+            color = AppColors.SurfaceBackground,
+            border = BorderStroke(1.dp, AppColors.BorderColorLight)
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(ModalStyle.Padding),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    .padding(20.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 OutlinedButton(
                     onClick = onCancel,
                     modifier = Modifier
                         .weight(1f)
-                        .height(50.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    border = BorderStroke(1.dp, ModalStyle.Divider)
+                        .height(54.dp),
+                    shape = AppShapes.MediumRadius,
+                    border = BorderStroke(1.dp, AppColors.BorderColor)
                 ) {
-                    Text("Annuler", color = Color.Gray)
+                    Text("Annuler", color = AppColors.TextSub, fontWeight = FontWeight.Bold)
                 }
 
                 Button(
                     onClick = onSave,
                     modifier = Modifier
-                        .weight(1f)
-                        .height(50.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = ModalStyle.Primary),
-                    shape = RoundedCornerShape(12.dp)
+                        .weight(1.5f)
+                        .height(54.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = AppColors.BrandBlue),
+                    shape = AppShapes.MediumRadius,
+                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
                 ) {
-                    Text(if (isEditing) "Enregistrer" else "Ajouter")
+                    Text(
+                        if (isEditing) "Enregistrer les modifications" else "Ajouter au dossier",
+                        fontWeight = FontWeight.ExtraBold
+                    )
                 }
             }
         }
@@ -249,37 +257,41 @@ fun AddPersonneChargeModal(
 // ==================== HELPER COMPONENTS ====================
 
 @Composable
-private fun ModalHeader(title: String, onClose: () -> Unit) {
-    Row(
+private fun PremiumModalHeader(title: String, onClose: () -> Unit) {
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = ModalStyle.Padding, vertical = 8.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+            .background(
+                Brush.horizontalGradient(AppGradients.Brand)
+            )
+            .statusBarsPadding()
+            .padding(horizontal = 20.dp, vertical = 24.dp)
     ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
-            color = Color.Black
-        )
-        IconButton(onClick = onClose) {
-            Icon(Icons.Rounded.Close, contentDescription = "Fermer", tint = Color.Gray)
+        Column {
+            Text(
+                text = "CSU - SÉNÉGAL",
+                style = MaterialTheme.typography.labelSmall,
+                color = Color.White.copy(alpha = 0.7f),
+                fontWeight = FontWeight.Black,
+                letterSpacing = 1.5.sp
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = title,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.ExtraBold,
+                color = Color.White
+            )
         }
-    }
-}
 
-@Composable
-private fun FormSection(title: String, content: @Composable ColumnScope.() -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(
-            text = title.uppercase(),
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.Bold,
-            color = ModalStyle.SectionTitle,
-            letterSpacing = 1.sp
-        )
-        content()
+        IconButton(
+            onClick = onClose,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .background(Color.White.copy(alpha = 0.2f), CircleShape)
+        ) {
+            Icon(Icons.Rounded.Close, contentDescription = "Fermer", tint = Color.White)
+        }
     }
 }
 
@@ -287,12 +299,19 @@ private fun FormSection(title: String, content: @Composable ColumnScope.() -> Un
 private fun MiniImagePicker(label: String, uri: String?, onPick: (Any?) -> Unit) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         ImagePickerComponent(
-            label = "", // On cache le label interne pour utiliser le nôtre
+            label = "",
             imageUri = uri,
             onImageSelected = onPick,
-            modifier = Modifier.aspectRatio(1f).clip(RoundedCornerShape(8.dp))
+            modifier = Modifier
+                .aspectRatio(1f)
+                .clip(AppShapes.MediumRadius)
         )
-        Spacer(Modifier.height(4.dp))
-        Text(label, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+        Spacer(Modifier.height(6.dp))
+        Text(
+            text = label, 
+            style = MaterialTheme.typography.labelMedium, 
+            color = AppColors.TextSub,
+            fontWeight = FontWeight.Bold
+        )
     }
 }

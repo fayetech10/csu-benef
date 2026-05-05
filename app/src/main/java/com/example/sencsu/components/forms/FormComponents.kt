@@ -14,6 +14,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -94,7 +95,7 @@ fun FormSection(
     title: String,
     icon: ImageVector? = null,
     modifier: Modifier = Modifier,
-    content: @Composable () -> Unit
+    content: @Composable ColumnScope.() -> Unit
 ) {
     Card(
         modifier = modifier
@@ -104,7 +105,7 @@ fun FormSection(
         colors = CardDefaults.cardColors(
             containerColor = AppColors.SurfaceBackground
         ),
-        shape = AppShapes.LargeRadius,
+        shape = AppShapes.MediumRadius,
         border = BorderStroke(1.dp, AppColors.BorderColorLight)
     ) {
         Column(
@@ -112,7 +113,7 @@ fun FormSection(
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 if (icon != null) {
                     Icon(
@@ -124,9 +125,9 @@ fun FormSection(
                 }
                 Text(
                     text = title,
-                    fontSize = 18.sp,
+                    fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
-                    color = AppColors.BrandBlueDark
+                    color = AppColors.TextMain
                 )
             }
 
@@ -155,8 +156,8 @@ fun DatePickerField(
                 value = value,
                 onValueChange = {},
                 readOnly = true,
-                label = { Text(text = label) },
-                placeholder = { Text("JJ/MM/AAAA", color = AppColors.TextDisabled) },
+                label = { Text(text = label, color = if (isError) AppColors.StatusRed else AppColors.TextSub) },
+                placeholder = { Text("JJ/MM/AAAA", color = AppColors.TextDisabled.copy(alpha = 0.5f)) },
                 isError = isError,
                 modifier = Modifier.fillMaxWidth(),
                 trailingIcon = {
@@ -168,13 +169,15 @@ fun DatePickerField(
                 },
                 shape = AppShapes.MediumRadius,
                 colors = TextFieldDefaults.colors(
-                    focusedContainerColor = AppColors.SurfaceMuted,
-                    unfocusedContainerColor = AppColors.SurfaceMuted,
-                    errorContainerColor = AppColors.StatusRedSoft,
+                    focusedContainerColor = AppColors.SurfaceBackground,
+                    unfocusedContainerColor = AppColors.SurfaceBackground,
+                    errorContainerColor = AppColors.SurfaceBackground,
                     focusedIndicatorColor = if (isError) AppColors.StatusRed else AppColors.BrandBlue,
                     unfocusedIndicatorColor = if (isError) AppColors.StatusRed else AppColors.BorderColor,
                     errorIndicatorColor = AppColors.StatusRed,
-                    cursorColor = AppColors.BrandBlue
+                    cursorColor = AppColors.BrandBlue,
+                    focusedLabelColor = AppColors.BrandBlue,
+                    unfocusedLabelColor = AppColors.TextSub
                 )
             )
         }
@@ -239,21 +242,23 @@ fun FormTextField(
                         onValueChange(newValue)
                     }
                 },
-                label = { Text(text = if (isRequired) "$label*" else label) },
-                placeholder = { Text(text = placeholder, color = AppColors.TextDisabled) },
+                label = { Text(text = if (isRequired) "$label*" else label, color = if (isError) AppColors.StatusRed else AppColors.TextSub) },
+                placeholder = { Text(text = placeholder, color = AppColors.TextDisabled.copy(alpha = 0.5f)) },
                 singleLine = singleLine,
                 isError = isError,
                 keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
                 modifier = Modifier.fillMaxWidth(),
                 shape = AppShapes.MediumRadius,
                 colors = TextFieldDefaults.colors(
-                    focusedContainerColor = AppColors.SurfaceMuted,
-                    unfocusedContainerColor = AppColors.SurfaceMuted,
-                    errorContainerColor = AppColors.StatusRedSoft,
+                    focusedContainerColor = AppColors.SurfaceBackground,
+                    unfocusedContainerColor = AppColors.SurfaceBackground,
+                    errorContainerColor = AppColors.SurfaceBackground,
                     focusedIndicatorColor = if (isError) AppColors.StatusRed else AppColors.BrandBlue,
                     unfocusedIndicatorColor = if (isError) AppColors.StatusRed else AppColors.BorderColor,
                     errorIndicatorColor = AppColors.StatusRed,
-                    cursorColor = AppColors.BrandBlue
+                    cursorColor = AppColors.BrandBlue,
+                    focusedLabelColor = AppColors.BrandBlue,
+                    unfocusedLabelColor = AppColors.TextSub
                 )
             )
         }

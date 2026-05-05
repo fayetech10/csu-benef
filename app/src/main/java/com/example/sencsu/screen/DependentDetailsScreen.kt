@@ -31,8 +31,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
+import com.example.sencsu.components.ServerImage
 import com.example.sencsu.components.QrCodeImage
 import com.example.sencsu.configs.ApiConfig
 import com.example.sencsu.data.remote.dto.PersonneChargeDto
@@ -50,6 +49,7 @@ fun DependentDetailsScreen(
     onBack: () -> Unit,
     onNavigateToHistory: (String, String, String) -> Unit,
     onNavigateToCard: (String, String) -> Unit,
+    onNavigateToEdit: (String, String) -> Unit,
     viewModel: BeneficiaryDashboardViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -57,6 +57,20 @@ fun DependentDetailsScreen(
     
     val pc = uiState.adherent?.personnesCharge?.find { it.id == pcId }
     var showContent by remember { mutableStateOf(false) }
+
+    // Refresh automatique quand l'écran revient au premier plan (ex: après une modification)
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                viewModel.refresh()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     LaunchedEffect(Unit) {
         delay(100)
@@ -71,6 +85,11 @@ fun DependentDetailsScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Retour", tint = Color.White)
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { onNavigateToEdit(adherentId, pcId) }) {
+                        Icon(Icons.Rounded.Edit, "Modifier", tint = Color.White)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
@@ -92,7 +111,7 @@ fun DependentDetailsScreen(
                     // ── En-tête avec Carte (Commence tout en haut) ──
                     DependentIdentitySection(
                         pc = pc, 
-                        token = token,
+                        sessionManager = viewModel.sessionManager,
                         onClick = { onNavigateToCard(adherentId, pcId) }
                     )
 
@@ -140,7 +159,7 @@ fun DependentDetailsScreen(
 }
 
 @Composable
-private fun DependentIdentitySection(pc: PersonneChargeDto, token: String?, onClick: () -> Unit) {
+private fun DependentIdentitySection(pc: PersonneChargeDto, sessionManager: com.example.sencsu.data.repository.SessionManager, onClick: () -> Unit) {
     val context = LocalContext.current
     val fullName = "${pc.prenoms} ${pc.nom}".trim()
     
@@ -206,12 +225,9 @@ private fun DependentIdentitySection(pc: PersonneChargeDto, token: String?, onCl
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 if (pc.photo != null) {
-                                    AsyncImage(
-                                        model = ImageRequest.Builder(context)
-                                            .data(ApiConfig.getImageUrl(pc.photo))
-                                            .apply { token?.let { addHeader("Authorization", "Bearer $it") } }
-                                            .crossfade(true).build(),
-                                        contentDescription = null,
+                                    ServerImage(
+                                        filename = pc.photo,
+                                        sessionManager = sessionManager,
                                         modifier = Modifier.fillMaxSize().clip(CircleShape),
                                         contentScale = ContentScale.Crop
                                     )
@@ -250,7 +266,7 @@ private fun DependentIdentitySection(pc: PersonneChargeDto, token: String?, onCl
                                 color = Color.White
                             ) {
                                 QrCodeImage(
-                                    value = pc.matricule,
+                                    value = com.example.sencsu.components.buildBeneficiaryQrUrl(pc.matricule),
                                     modifier = Modifier.padding(4.dp)
                                 )
                             }

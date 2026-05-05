@@ -29,11 +29,12 @@ import kotlinx.coroutines.delay
 @Composable
 fun SplashScreen(
     onNavigateToLogin: () -> Unit,
-    onNavigateToDashboard: () -> Unit,
+    onNavigateToDashboard: (String) -> Unit,
     viewModel: SplashViewModel = hiltViewModel()
 ) {
     var startAnimation by remember { mutableStateOf(false) }
     val isLoggedIn by viewModel.isLoggedIn.collectAsState()
+    val userRole by viewModel.userRole.collectAsState()
 
     // Animations
     val logoScale by animateFloatAsState(
@@ -51,11 +52,11 @@ fun SplashScreen(
         startAnimation = true
     }
 
-    LaunchedEffect(isLoggedIn) {
+    LaunchedEffect(isLoggedIn, userRole) {
         if (isLoggedIn != null) {
             delay(2200)
             if (isLoggedIn == true) {
-                onNavigateToDashboard()
+                onNavigateToDashboard(userRole ?: "AGENT")
             } else {
                 onNavigateToLogin()
             }

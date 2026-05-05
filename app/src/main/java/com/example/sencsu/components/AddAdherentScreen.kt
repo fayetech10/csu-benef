@@ -80,12 +80,24 @@ fun AddAdherentScreen(
     }
     var currentFormStep by remember { mutableStateOf(0) }
 
-    val formSteps = listOf("Identité", "Contact", "Zone", "Photos", "Bénéficiaires", "Résumé")
+    val formSteps = remember(state.formType) {
+        if (state.formType == com.example.sencsu.domain.viewmodel.FormType.PERSONNE_CHARGE) {
+            listOf("Identité", "Contact", "Zone", "Photos", "Résumé")
+        } else {
+            listOf("Identité", "Contact", "Zone", "Photos", "Bénéficiaires", "Résumé")
+        }
+    }
 
     var showAlertDialog by remember { mutableStateOf(false) }
     var alertTitle by remember { mutableStateOf("") }
     var alertMessage by remember { mutableStateOf("") }
     var alertAction by remember { mutableStateOf<(() -> Unit)?>(null) }
+
+    LaunchedEffect(state.isEditMode) {
+        if (state.isEditMode) {
+            screenState = ScreenState.FormMode
+        }
+    }
 
     LaunchedEffect(Unit) {
         viewModel.uiEvent.collect { event ->
@@ -111,7 +123,11 @@ fun AddAdherentScreen(
         topBar = {
             if (screenState == ScreenState.FormMode) {
                 ModernHeader(
-                    title = if (isEditMode) "Modifier Adhérent" else "Nouvel Adhérent",
+                    title = when {
+                        state.formType == com.example.sencsu.domain.viewmodel.FormType.PERSONNE_CHARGE -> "Modifier Bénéficiaire"
+                        isEditMode -> "Modifier Adhérent"
+                        else -> "Nouvel Adhérent"
+                    },
                     currentStep = currentFormStep,
                     totalSteps = formSteps.size,
                     totalCost = state.totalCost,
@@ -219,14 +235,15 @@ fun AddAdherentScreen(
                         targetState = currentFormStep,
                         transitionSpec = { fadeIn() with fadeOut() },
                         label = "form_step"
-                    ) { step ->
+                    ) { stepIndex ->
+                        val stepName = formSteps.getOrNull(stepIndex) ?: ""
                         Column(modifier = Modifier.padding(horizontal = 20.dp)) {
-                            when (step) {
-                                0 -> IdentitySection(state, viewModel)
-                                1 -> ContactSection(state, viewModel)
-                                2 -> LocationSection(state, viewModel)
-                                3 -> PhotosSection(state, viewModel)
-                                4 -> BeneficiariesSection(
+                            when (stepName) {
+                                "Identité" -> IdentitySection(state, viewModel)
+                                "Contact" -> ContactSection(state, viewModel)
+                                "Zone" -> LocationSection(state, viewModel)
+                                "Photos" -> PhotosSection(state, viewModel)
+                                "Bénéficiaires" -> BeneficiariesSection(
                                     state = state,
                                     viewModel = viewModel,
                                     onShowAlert = { title, msg, action ->
@@ -236,7 +253,7 @@ fun AddAdherentScreen(
                                         showAlertDialog = true
                                     }
                                 )
-                                5 -> SummarySection(state, viewModel)
+                                "Résumé" -> SummarySection(state, viewModel)
                             }
                         }
                     }
@@ -836,6 +853,16 @@ fun IdentitySection(state: AddAdherentUiState, viewModel: AddAdherentViewModel) 
             selected = state.typeAdhesion,
             onSelect = viewModel::updateTypeAdhesion
         )
+
+        if (state.formType == com.example.sencsu.domain.viewmodel.FormType.PERSONNE_CHARGE) {
+            Spacer(modifier = Modifier.height(12.dp))
+            AppDropdown(
+                label = "Lien de parenté*",
+                options = FormConstants.LIENS_PARENTE,
+                selected = state.lienParent,
+                onSelect = viewModel::updateLienParent
+            )
+        }
     }
 }
 
@@ -864,7 +891,7 @@ fun ContactSection(state: AddAdherentUiState, viewModel: AddAdherentViewModel) {
             onValueChange = viewModel::updateSecteurActivite,
             label = "Secteur d'activité*",
             placeholder = "Ex: Agriculture, Commerce...",
-            isError = state.validationErrors.containsKey("secteurActivite"),
+            isError = state.validationErrors.containsKey("secteurActivite") && state.formType == com.example.sencsu.domain.viewmodel.FormType.ADHERENT,
             errorMessage = state.validationErrors["secteurActivite"]
         )
         Spacer(modifier = Modifier.height(12.dp))
@@ -1023,8 +1050,12 @@ fun SummarySection(state: AddAdherentUiState, viewModel: AddAdherentViewModel) {
         }
 
         SummaryCard("Bénéficiaires", Icons.Outlined.Group) {
-            SummaryRow("Nombre", "${state.dependants.size} personne(s) à charge")
-            SummaryRow("Coût Total", "${state.totalCost.toLocaleString()} F")
+            if (state.formType == com.example.sencsu.domain.viewmodel.FormType.ADHERENT) {
+                SummaryRow("Nombre", "${state.dependants.size} personne(s) à charge")
+                SummaryRow("Coût Total", "${state.totalCost.toLocaleString()} F")
+            } else {
+                SummaryRow("Lien de parenté", state.lienParent)
+            }
         }
     }
 }

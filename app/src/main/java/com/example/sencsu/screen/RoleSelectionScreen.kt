@@ -1,173 +1,191 @@
 package com.example.sencsu.screen
 
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.AdminPanelSettings
-import androidx.compose.material.icons.rounded.ArrowForward
-import androidx.compose.material.icons.rounded.FamilyRestroom
-import androidx.compose.material.icons.rounded.Groups
-import androidx.compose.material.icons.rounded.HealthAndSafety
-import androidx.compose.material.icons.rounded.VerifiedUser
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.material.icons.automirrored.rounded.ArrowForward
+import androidx.compose.material.icons.rounded.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.example.sencsu.theme.AppColors
-import com.example.sencsu.theme.AppShapes
+import androidx.compose.ui.unit.sp
+import com.example.sencsu.theme.*
 
 @Composable
 fun RoleSelectionScreen(
     onSelectAgent: () -> Unit,
     onSelectBeneficiary: () -> Unit
 ) {
+    var showContent by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { showContent = true }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(AppColors.AppBackground)
     ) {
+        // IMMERSIVE TOP GRADIENT
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .fillMaxHeight(0.36f)
+                .fillMaxHeight(0.5f)
                 .background(
                     Brush.verticalGradient(
-                        listOf(
-                            AppColors.BrandBlueDark,
-                            AppColors.BrandBlue,
-                            AppColors.BrandBlueLite
-                        )
+                        listOf(AppColors.BrandBlueDark, AppColors.BrandBlue, AppColors.AppBackground)
                     )
                 )
-        )
+        ) {
+            // Decorative glass elements
+            Box(
+                modifier = Modifier
+                    .size(240.dp)
+                    .align(Alignment.TopEnd)
+                    .offset(x = 80.dp, y = (-60).dp)
+                    .clip(CircleShape)
+                    .background(Color.White.copy(alpha = 0.05f))
+            )
+        }
 
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 20.dp)
                 .statusBarsPadding()
-                .navigationBarsPadding(),
+                .navigationBarsPadding()
+                .padding(horizontal = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(28.dp))
+            Spacer(modifier = Modifier.height(40.dp))
 
-            Surface(
-                modifier = Modifier.size(84.dp),
-                shape = CircleShape,
-                color = Color.White.copy(alpha = 0.18f),
-                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.24f))
+            // BRANDING
+            AnimatedVisibility(
+                visible = showContent,
+                enter = fadeIn(tween(600)) + slideInVertically(tween(600)) { -30 }
             ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = Icons.Rounded.HealthAndSafety,
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(40.dp)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(18.dp))
-
-            Text(
-                "SenCSU",
-                style = MaterialTheme.typography.headlineLarge,
-                fontWeight = FontWeight.Black,
-                color = Color.White
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                "Gestion des beneficiaires, adherents et foyers",
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color.White.copy(alpha = 0.84f)
-            )
-
-            Spacer(modifier = Modifier.height(26.dp))
-
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                color = Color.White,
-                shape = AppShapes.LargeRadius,
-                tonalElevation = 0.dp,
-                shadowElevation = 10.dp
-            ) {
-                Column(
-                    modifier = Modifier.padding(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(18.dp)
-                ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Surface(
+                        modifier = Modifier.size(80.dp),
+                        shape = AppShapes.LargeRadius,
+                        color = Color.White.copy(alpha = 0.15f),
+                        border = BorderStroke(1.5.dp, Color.White.copy(alpha = 0.2f))
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                Icons.Rounded.HealthAndSafety, null,
+                                tint = Color.White,
+                                modifier = Modifier.size(40.dp)
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(20.dp))
                     Text(
-                        "Choisissez votre espace",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = AppColors.TextMain
+                        "SenCSU",
+                        style = MaterialTheme.typography.headlineLarge,
+                        fontWeight = FontWeight.Black,
+                        color = Color.White,
+                        letterSpacing = 1.sp
                     )
                     Text(
-                        "Accedez a l'interface adaptee a votre role pour suivre les dossiers, les renouvellements et les informations des beneficiaires.",
+                        "La plateforme numérique de la CMU",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = AppColors.TextSub
-                    )
-
-                    RoleOptionCard(
-                        title = "Espace agent",
-                        subtitle = "Enrolement, suivi des adherents, synchronisation et gestion terrain.",
-                        icon = Icons.Rounded.AdminPanelSettings,
-                        accent = AppColors.BrandBlue,
-                        filled = true,
-                        onClick = onSelectAgent
-                    )
-
-                    RoleOptionCard(
-                        title = "Espace beneficiaire",
-                        subtitle = "Carte, foyer, documents et statut de couverture en un coup d'oeil.",
-                        icon = Icons.Rounded.FamilyRestroom,
-                        accent = AppColors.GoldAccent,
-                        filled = false,
-                        onClick = onSelectBeneficiary
+                        color = Color.White.copy(alpha = 0.7f),
+                        textAlign = TextAlign.Center
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(18.dp))
+            Spacer(modifier = Modifier.height(44.dp))
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            // SELECTION BOX
+            AnimatedVisibility(
+                visible = showContent,
+                enter = fadeIn(tween(600, delayMillis = 200)) + slideInVertically(tween(600, delayMillis = 200)) { 40 }
             ) {
-                HighlightChip(
-                    modifier = Modifier.weight(1f),
-                    icon = Icons.Rounded.Groups,
-                    value = "Foyers",
-                    caption = "gestion centralisee"
-                )
-                HighlightChip(
-                    modifier = Modifier.weight(1f),
-                    icon = Icons.Rounded.VerifiedUser,
-                    value = "Couverture",
-                    caption = "suivi plus clair"
-                )
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = AppColors.SurfaceBackground,
+                    shape = AppShapes.LargeRadius,
+                    shadowElevation = 12.dp,
+                    border = BorderStroke(1.dp, AppColors.BorderColorLight)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(24.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Text(
+                            "Votre Espace",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Black,
+                            color = AppColors.TextMain
+                        )
+                        Text(
+                            "Sélectionnez votre profil pour accéder à vos outils personnalisés.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = AppColors.TextSub
+                        )
+
+                        Spacer(Modifier.height(4.dp))
+
+                        RoleOptionCard(
+                            title = "Agent Terrain",
+                            subtitle = "Enrôlement, suivi et synchronisation.",
+                            icon = Icons.Rounded.Engineering,
+                            accent = AppColors.BrandBlue,
+                            filled = true,
+                            onClick = onSelectAgent
+                        )
+
+                        RoleOptionCard(
+                            title = "Bénéficiaire",
+                            subtitle = "Ma carte, mon foyer et mes soins.",
+                            icon = Icons.Rounded.Person,
+                            accent = AppColors.GoldAccent,
+                            filled = false,
+                            onClick = onSelectBeneficiary
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // FEATURES HIGHLIGHT
+            AnimatedVisibility(
+                visible = showContent,
+                enter = fadeIn(tween(600, delayMillis = 400))
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    HighlightFeature(
+                        modifier = Modifier.weight(1f),
+                        icon = Icons.Rounded.Security,
+                        label = "Sécurisé"
+                    )
+                    HighlightFeature(
+                        modifier = Modifier.weight(1f),
+                        icon = Icons.Rounded.CloudSync,
+                        label = "Temps Réel"
+                    )
+                    HighlightFeature(
+                        modifier = Modifier.weight(1f),
+                        icon = Icons.Rounded.SupportAgent,
+                        label = "Support 24/7"
+                    )
+                }
             }
         }
     }
@@ -184,103 +202,83 @@ private fun RoleOptionCard(
 ) {
     Surface(
         onClick = onClick,
-        shape = AppShapes.LargeRadius,
-        color = if (filled) accent else Color.White,
+        shape = AppShapes.MediumRadius,
+        color = if (filled) accent else AppColors.SurfaceBackground,
         border = if (filled) null else BorderStroke(1.dp, AppColors.BorderColor),
-        tonalElevation = 0.dp,
-        shadowElevation = if (filled) 0.dp else 1.dp
+        shadowElevation = if (filled) 4.dp else 0.dp
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(18.dp),
+                .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Surface(
-                modifier = Modifier.size(52.dp),
-                shape = CircleShape,
-                color = if (filled) Color.White.copy(alpha = 0.18f) else AppColors.BrandBlueLite
+                modifier = Modifier.size(48.dp),
+                shape = AppShapes.SmallRadius,
+                color = if (filled) Color.White.copy(alpha = 0.2f) else accent.copy(alpha = 0.1f)
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         imageVector = icon,
                         contentDescription = null,
-                        tint = if (filled) Color.White else AppColors.BrandBlue,
+                        tint = if (filled) Color.White else accent,
                         modifier = Modifier.size(24.dp)
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.size(14.dp))
+            Spacer(modifier = Modifier.size(16.dp))
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     title,
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.ExtraBold,
                     color = if (filled) Color.White else AppColors.TextMain
                 )
-                Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (filled) Color.White.copy(alpha = 0.82f) else AppColors.TextSub
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (filled) Color.White.copy(alpha = 0.8f) else AppColors.TextSub
                 )
             }
 
             Icon(
-                imageVector = Icons.Rounded.ArrowForward,
+                imageVector = Icons.AutoMirrored.Rounded.ArrowForward,
                 contentDescription = null,
-                tint = if (filled) Color.White else AppColors.TextSub
+                tint = if (filled) Color.White else AppColors.TextDisabled,
+                modifier = Modifier.size(18.dp)
             )
         }
     }
 }
 
 @Composable
-private fun HighlightChip(
+private fun HighlightFeature(
     modifier: Modifier = Modifier,
     icon: ImageVector,
-    value: String,
-    caption: String
+    label: String
 ) {
     Surface(
         modifier = modifier,
         shape = AppShapes.MediumRadius,
-        color = Color.White.copy(alpha = 0.92f)
+        color = Color.White.copy(alpha = 0.6f),
+        border = BorderStroke(0.5.dp, AppColors.BorderColorLight)
     ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
+        Column(
+            modifier = Modifier.padding(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            Box(
-                modifier = Modifier
-                    .size(34.dp)
-                    .background(AppColors.BrandBlueLite, CircleShape)
-                    .border(1.dp, AppColors.BorderColorLight, CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = AppColors.BrandBlue,
-                    modifier = Modifier.size(18.dp)
-                )
-            }
-            Spacer(modifier = Modifier.size(10.dp))
-            Column {
-                Text(
-                    value,
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = AppColors.TextMain
-                )
-                Text(
-                    caption,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = AppColors.TextSub
-                )
-            }
+            Icon(icon, null, tint = AppColors.BrandBlue, modifier = Modifier.size(20.dp))
+            Text(
+                label,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+                color = AppColors.TextMain,
+                textAlign = TextAlign.Center
+            )
         }
     }
 }

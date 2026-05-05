@@ -17,10 +17,16 @@ sealed class BottomNavItem(
         Icons.Outlined.Home,
         "Accueil"
     )
-    object Dependents : BottomNavItem(
-        "dependents_content",
+    object Members : BottomNavItem(
+        "members_content",
         Icons.Rounded.Group,
         Icons.Outlined.Group,
+        "Adhérents"
+    )
+    object Dependents : BottomNavItem(
+        "dependents_content",
+        Icons.Rounded.FamilyRestroom,
+        Icons.Outlined.FamilyRestroom,
         "Foyer"
     )
     object Renewal : BottomNavItem(

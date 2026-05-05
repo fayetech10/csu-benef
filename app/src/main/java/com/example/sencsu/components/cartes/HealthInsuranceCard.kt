@@ -86,7 +86,7 @@ fun HealthInsuranceCard(
                             Color(0xFFF5F5F5),
                             Color(0xFFFFFFFF),
                             Color(0xFFF0F0F0)
-                        )
+                               )
                     )
                 )
                 .clip(RoundedCornerShape(20.dp))
@@ -231,14 +231,9 @@ fun HealthInsuranceCard(
                             contentAlignment = Alignment.Center
                         ) {
                             if (!data.matricule.isNullOrBlank() && data.matricule != "null") {
-                                AsyncImage(
-                                    model = ImageRequest.Builder(context)
-                                        .data(ApiConfig.getQrCodeUrl(data.matricule))
-                                        .apply { token?.let { addHeader("Authorization", "Bearer $it") } }
-                                        .build(),
-                                    contentDescription = "QR Code",
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.Crop
+                                com.example.sencsu.components.QrCodeImage(
+                                    value = com.example.sencsu.components.buildBeneficiaryQrUrl(data.matricule),
+                                    modifier = Modifier.fillMaxSize()
                                 )
                             } else {
                                 // Placeholder QR Code

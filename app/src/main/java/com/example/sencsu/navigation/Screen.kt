@@ -16,6 +16,7 @@ import androidx.compose.material.icons.filled.Password
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.rounded.QrCode
 import androidx.compose.material.icons.filled.VerifiedUser
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.ui.graphics.vector.ImageVector
 
 /**
@@ -86,4 +87,33 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector)
     object Profile : Screen("profile", "Profil", Icons.Default.AccountCircle)
     object PasswordUpdate : Screen("password_update", "Mot de passe", Icons.Default.Password)
     object QRScanner : Screen("qr_scanner", "Scanner QR", Icons.Rounded.QrCode)
+
+    object EditProfile : Screen(
+        "edit_profile/{adherentId}?pcId={pcId}",
+        "Modifier Profil",
+        Icons.Default.Edit
+    ) {
+        fun createRoute(adherentId: String, pcId: String? = null) =
+            if (pcId != null) "edit_profile/$adherentId?pcId=$pcId"
+            else "edit_profile/$adherentId"
+    }
+
+    // ── Deep Linking & Scanning ──
+    object DeepLink : Screen(
+        "adherent?matricule={matricule}",
+        "Vérification",
+        Icons.Rounded.QrCode
+    )
+
+    object Payment : Screen(
+        "paiement/{adherentId}/{localAdherentId}/{montantTotal}",
+        "Paiement",
+        Icons.Default.Add
+    ) {
+        fun createRoute(
+            adherentId: String? = null,
+            localAdherentId: Long? = null,
+            montantTotal: Int = 0
+        ) = "paiement/${adherentId ?: "null"}/${localAdherentId ?: "null"}/$montantTotal"
+    }
 }

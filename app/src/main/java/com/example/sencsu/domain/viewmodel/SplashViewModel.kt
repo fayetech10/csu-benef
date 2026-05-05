@@ -19,10 +19,16 @@ class SplashViewModel @Inject constructor(
     private val _isLoggedIn = MutableStateFlow<Boolean?>(null)
     val isLoggedIn = _isLoggedIn.asStateFlow()
 
+    private val _userRole = MutableStateFlow<String?>(null)
+    val userRole = _userRole.asStateFlow()
+
     init {
         viewModelScope.launch {
             // On vérifie directement dans DataStore si un token existe.
             val authToken = sessionManager.tokenFlow.first()
+            val user = sessionManager.userFlow.first()
+            
+            _userRole.value = user?.role
             _isLoggedIn.value = !authToken.isNullOrBlank()
         }
     }

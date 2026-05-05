@@ -18,6 +18,11 @@ import com.example.sencsu.screen.PasswordUpdateScreen
 import com.example.sencsu.screen.RoleSelectionScreen
 import com.example.sencsu.screen.SplashScreen
 import com.example.sencsu.screen.QrScannerScreen
+import com.example.sencsu.screen.DeepLinkResolverScreen
+import com.example.sencsu.screen.Paiement
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
+import androidx.navigation.navDeepLink
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
@@ -51,8 +56,9 @@ fun AppNavigation(
                         popUpTo(Screen.Splash.route) { inclusive = true }
                     }
                 },
-                onNavigateToDashboard = {
-                    navController.navigate("main_tabs") {
+                onNavigateToDashboard = { role ->
+                    val target = if (role == "AGENT") "main_tabs" else "beneficiary_tabs"
+                    navController.navigate(target) {
                         popUpTo(Screen.Splash.route) { inclusive = true }
                     }
                 }
@@ -169,6 +175,55 @@ fun AppNavigation(
                 },
                 onNavigateToCard = { aId, pId ->
                     navController.navigate(Screen.DigitalCard.createRoute(aId, pId))
+                },
+                onNavigateToEdit = { aId, pId ->
+                    navController.navigate(Screen.EditProfile.createRoute(aId, pId))
+                }
+            )
+        }
+
+        composable(
+            route = Screen.EditProfile.route,
+            arguments = listOf(
+                androidx.navigation.navArgument("adherentId") { type = androidx.navigation.NavType.StringType },
+                androidx.navigation.navArgument("pcId") { 
+                    type = androidx.navigation.NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            )
+        ) { backStackEntry ->
+            val adherentId = backStackEntry.arguments?.getString("adherentId") ?: ""
+            val pcId = backStackEntry.arguments?.getString("pcId")
+            val addAdherentViewModel: com.example.sencsu.domain.viewmodel.AddAdherentViewModel = androidx.hilt.navigation.compose.hiltViewModel()
+            
+            androidx.compose.runtime.LaunchedEffect(adherentId, pcId) {
+                if (pcId != null) {
+                    addAdherentViewModel.fetchAndLoadDependentForEdit(adherentId, pcId)
+                } else {
+                    addAdherentViewModel.fetchAndLoadForEdit(adherentId)
+                }
+            }
+
+            com.example.sencsu.components.AddAdherentScreen(
+                onBack = { navController.popBackStack() },
+                onNavigateToPayment = { _, _, _ -> }, // Pas de paiement en modification
+                agentId = null,
+                viewModel = addAdherentViewModel
+            )
+        }
+
+        composable(
+            route = Screen.AdherentDetails.route,
+            arguments = listOf(
+                androidx.navigation.navArgument("adherentId") { type = androidx.navigation.NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val adherentId = backStackEntry.arguments?.getString("adherentId") ?: ""
+            com.example.sencsu.screen.AdherentDetailsScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToEdit = { id ->
+                    navController.navigate(Screen.EditProfile.createRoute(id))
                 }
             )
         }
@@ -196,7 +251,71 @@ fun AppNavigation(
 
         composable(Screen.QRScanner.route) {
             QrScannerScreen(
-                onDismiss = { navController.popBackStack() }
+                onDismiss = { navController.popBackStack() },
+                onNavigateToDetails = { adherentId ->
+                    navController.navigate(Screen.AdherentDetails.createRoute(adherentId)) {
+                        popUpTo(Screen.QRScanner.route) { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        composable(Screen.AddMember.route) {
+            val addAdherentViewModel: com.example.sencsu.domain.viewmodel.AddAdherentViewModel = androidx.hilt.navigation.compose.hiltViewModel()
+            com.example.sencsu.components.AddAdherentScreen(
+                onBack = { navController.popBackStack() },
+                onNavigateToPayment = { adherentId, localAdherentId, montantTotal ->
+                    navController.navigate(
+                        Screen.Payment.createRoute(adherentId, localAdherentId, montantTotal)
+                    ) {
+                        popUpTo(Screen.AddMember.route) { inclusive = true }
+                    }
+                },
+                agentId = null, // Récupéré par le ViewModel via SessionManager
+                viewModel = addAdherentViewModel
+            )
+        }
+
+        composable(
+            route = Screen.Payment.route,
+            arguments = listOf(
+                navArgument("adherentId") { type = NavType.StringType; nullable = true },
+                navArgument("localAdherentId") { type = NavType.StringType; nullable = true },
+                navArgument("montantTotal") { type = NavType.IntType; defaultValue = 0 }
+            )
+        ) { backStackEntry ->
+            val adherentId = backStackEntry.arguments?.getString("adherentId")
+                ?.takeIf { it != "null" }
+            val localAdherentIdStr = backStackEntry.arguments?.getString("localAdherentId")
+                ?.takeIf { it != "null" }
+            val localAdherentId = localAdherentIdStr?.toLongOrNull()
+            val montantTotal = backStackEntry.arguments?.getInt("montantTotal")?.toDouble()
+            Paiement(
+                adherentId = adherentId,
+                localAdherentId = localAdherentId,
+                montantTotal = montantTotal,
+                navController = navController
+            )
+        }
+
+        composable(
+            route = Screen.DeepLink.route,
+            deepLinks = listOf(
+                navDeepLink {
+                    uriPattern = "sencsu://adherent?matricule={matricule}"
+                }
+            )
+        ) { backStackEntry ->
+            val matricule = backStackEntry.arguments?.getString("matricule") ?: ""
+            DeepLinkResolverScreen(
+                matricule = matricule,
+                onNavigate = { route ->
+                    navController.navigate(route) {
+                        // On évite d'empiler le résolveur
+                        popUpTo(Screen.DeepLink.route) { inclusive = true }
+                    }
+                },
+                onCancel = { navController.popBackStack() }
             )
         }
     }

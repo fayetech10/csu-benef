@@ -61,7 +61,7 @@ interface ApiService {
         @Path("agentId") agentId: String
     ): ApiResponse<List<AdherentDto>>
 
-    @PUT("/api/adherents/update/{id}")
+    @PUT("/api/adherents/{id}")
     suspend fun updateAdherent(
         @Path("id") id: String,
         @Body adherent: AdherentUpdateDto

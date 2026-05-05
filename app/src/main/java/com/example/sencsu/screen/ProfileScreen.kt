@@ -83,6 +83,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.DisposableEffect
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -100,6 +102,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.SubcomposeAsyncImage
+import com.example.sencsu.components.ServerImage
 import com.example.sencsu.configs.ApiConfig
 import com.example.sencsu.data.remote.dto.AdherentDto
 import com.example.sencsu.domain.viewmodel.BeneficiaryDashboardViewModel
@@ -114,11 +117,15 @@ import kotlinx.coroutines.launch
 @Composable
 fun ProfileScreen(
     onNavigateToHistory: (String) -> Unit = {},
+    onNavigateToEdit: (String) -> Unit = {},
     viewModel: BeneficiaryDashboardViewModel = hiltViewModel(),
     onLogout: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val adherent = uiState.adherent
+    val currentUser by viewModel.sessionManager.userFlow.collectAsState(initial = null)
+    val isAgent = currentUser?.role == "AGENT"
+    
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
@@ -130,15 +137,32 @@ fun ProfileScreen(
     var selectedViewerImage by remember { mutableStateOf<String?>(null) }
     var infoDialog by remember { mutableStateOf<ProfileInfoDialog?>(null) }
 
-    val fullName = "${adherent?.prenoms.orEmpty()} ${adherent?.nom.orEmpty()}"
-        .trim()
-        .ifEmpty { "Profil beneficiaire" }
+    val fullName = if (isAgent) {
+        "${currentUser?.prenom.orEmpty()} ${currentUser?.name.orEmpty()}".trim().ifEmpty { "Profil Agent" }
+    } else {
+        "${adherent?.prenoms.orEmpty()} ${adherent?.nom.orEmpty()}".trim().ifEmpty { "Profil beneficiaire" }
+    }
+
     val initials = fullName.split(" ")
         .filter { it.isNotBlank() }
         .take(2)
         .mapNotNull { it.firstOrNull()?.uppercase() }
         .joinToString("")
         .ifEmpty { "?" }
+
+    // Refresh automatique quand l'écran revient au premier plan (ex: après une modification)
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                viewModel.refresh()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     LaunchedEffect(Unit) {
         delay(100)
@@ -162,7 +186,8 @@ fun ProfileScreen(
                 initials = initials,
                 showContent = showContent,
                 isLoading = uiState.isLoading,
-                onEditClick = { if (adherent != null) showEditDialog = true },
+                sessionManager = viewModel.sessionManager,
+                onEditClick = { adherent?.id?.let(onNavigateToEdit) },
                 onMoreClick = { showMoreDialog = true }
             )
 
@@ -173,7 +198,7 @@ fun ProfileScreen(
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 AnimatedVisibility(
-                    visible = showContent,
+                    visible = showContent && !isAgent,
                     enter = fadeIn(tween(350, delayMillis = 120)) + slideInVertically(
                         tween(350, delayMillis = 120),
                         initialOffsetY = { 40 }
@@ -183,47 +208,57 @@ fun ProfileScreen(
                 }
 
                 ProfileActionGrid(
-                    onEdit = { if (adherent != null) showEditDialog = true },
+                    isAgent = isAgent,
+                    onEdit = { adherent?.id?.let(onNavigateToEdit) },
                     onHistory = { adherent?.id?.let(onNavigateToHistory) },
                     onPassword = { showPasswordDialog = true },
                     onMore = { showMoreDialog = true }
                 )
 
                 ProfileSection(title = "Informations personnelles") {
-                    ProfileInfoRow(Icons.Rounded.Badge, "Matricule", adherent?.matricule.orDash())
-                    HorizontalDivider(color = AppColors.BorderColorLight)
-                    ProfileInfoRow(Icons.Rounded.CreditCard, "NIN / Piece", adherent?.numeroCNi.orDash())
-                    HorizontalDivider(color = AppColors.BorderColorLight)
-                    ProfileInfoRow(Icons.Rounded.CalendarToday, "Date de naissance", adherent?.dateNaissance.orDash())
-                    HorizontalDivider(color = AppColors.BorderColorLight)
-                    ProfileInfoRow(Icons.Rounded.Phone, "Telephone", adherent?.whatsapp.orDash())
-                    HorizontalDivider(color = AppColors.BorderColorLight)
-                    ProfileInfoRow(Icons.Rounded.Home, "Adresse", adherent?.adresse.orDash())
+                    if (!isAgent) {
+                        ProfileInfoRow(Icons.Rounded.Badge, "Matricule", adherent?.matricule.orDash())
+                        HorizontalDivider(color = AppColors.BorderColorLight)
+                    }
+                    ProfileInfoRow(Icons.Rounded.Phone, "Telephone", if (isAgent) currentUser?.telephone.orDash() else adherent?.whatsapp.orDash())
+                    if (!isAgent) {
+                        HorizontalDivider(color = AppColors.BorderColorLight)
+                        ProfileInfoRow(Icons.Rounded.CreditCard, "NIN / Piece", adherent?.numeroCNi.orDash())
+                        HorizontalDivider(color = AppColors.BorderColorLight)
+                        ProfileInfoRow(Icons.Rounded.CalendarToday, "Date de naissance", adherent?.dateNaissance.orDash())
+                        HorizontalDivider(color = AppColors.BorderColorLight)
+                        ProfileInfoRow(Icons.Rounded.Home, "Adresse", adherent?.adresse.orDash())
+                    }
                 }
 
-                ProfileSection(title = "Localisation et adhesion") {
-                    ProfileInfoRow(Icons.Rounded.Map, "Region", adherent?.region.orDash())
-                    HorizontalDivider(color = AppColors.BorderColorLight)
-                    ProfileInfoRow(Icons.Rounded.LocationOn, "Commune", adherent?.commune.orDash())
-                    HorizontalDivider(color = AppColors.BorderColorLight)
-                    ProfileInfoRow(Icons.Rounded.Work, "Secteur", adherent?.secteurActivite.orDash())
-                    HorizontalDivider(color = AppColors.BorderColorLight)
-                    ProfileInfoRow(Icons.Rounded.Category, "Type beneficiaire", adherent?.typeBenef.orDash())
-                }
+                if (!isAgent) {
+                    ProfileSection(title = "Localisation et adhesion") {
+                        ProfileInfoRow(Icons.Rounded.Map, "Region", adherent?.region.orDash())
+                        HorizontalDivider(color = AppColors.BorderColorLight)
+                        ProfileInfoRow(Icons.Rounded.LocationOn, "Commune", adherent?.commune.orDash())
+                        HorizontalDivider(color = AppColors.BorderColorLight)
+                        ProfileInfoRow(Icons.Rounded.Work, "Secteur", adherent?.secteurActivite.orDash())
+                        HorizontalDivider(color = AppColors.BorderColorLight)
+                        ProfileInfoRow(Icons.Rounded.Category, "Type beneficiaire", adherent?.typeBenef.orDash())
+                    }
 
-                DocumentsSection(
-                    rectoUrl = ApiConfig.getImageUrl(adherent?.photoRecto),
-                    versoUrl = ApiConfig.getImageUrl(adherent?.photoVerso),
-                    onOpen = { selectedViewerImage = it }
-                )
+                    DocumentsSection(
+                        rectoFilename = adherent?.photoRecto,
+                        versoFilename = adherent?.photoVerso,
+                        sessionManager = viewModel.sessionManager,
+                        onOpen = { selectedViewerImage = it }
+                    )
+                }
 
                 ProfileSection(title = "Parametres") {
-                    SettingsItem(
-                        icon = Icons.Rounded.MedicalServices,
-                        title = "Historique medical",
-                        subtitle = "Consulter les soins et remboursements",
-                        onClick = { adherent?.id?.let(onNavigateToHistory) }
-                    )
+                    if (!isAgent) {
+                        SettingsItem(
+                            icon = Icons.Rounded.MedicalServices,
+                            title = "Historique medical",
+                            subtitle = "Consulter les soins et remboursements",
+                            onClick = { adherent?.id?.let(onNavigateToHistory) }
+                        )
+                    }
                     SettingsItem(
                         icon = Icons.Rounded.Lock,
                         title = "Modifier le mot de passe",
@@ -284,23 +319,6 @@ fun ProfileScreen(
         }
     }
 
-    if (showEditDialog && adherent != null) {
-        EditProfileDialog(
-            adherent = adherent,
-            isLoading = uiState.isLoading,
-            onDismiss = { showEditDialog = false },
-            onSave = { updated ->
-                viewModel.updateProfile(updated) { success, message ->
-                    scope.launch {
-                        snackbarHostState.showSnackbar(
-                            if (success) "Profil mis a jour" else message ?: "Mise a jour impossible"
-                        )
-                    }
-                    if (success) showEditDialog = false
-                }
-            }
-        )
-    }
 
     if (showPasswordDialog) {
         PasswordDialog(
@@ -391,6 +409,7 @@ private fun ProfileHero(
     initials: String,
     showContent: Boolean,
     isLoading: Boolean,
+    sessionManager: com.example.sencsu.data.repository.SessionManager,
     onEditClick: () -> Unit,
     onMoreClick: () -> Unit
 ) {
@@ -447,8 +466,9 @@ private fun ProfileHero(
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 ProfileAvatar(
-                    photoUrl = ApiConfig.getImageUrl(adherent?.photo),
-                    initials = initials
+                    filename = adherent?.photo,
+                    initials = initials,
+                    sessionManager = sessionManager
                 )
                 Spacer(Modifier.height(14.dp))
                 Text(
@@ -478,7 +498,7 @@ private fun ProfileHero(
 }
 
 @Composable
-private fun ProfileAvatar(photoUrl: String?, initials: String) {
+private fun ProfileAvatar(filename: String?, initials: String, sessionManager: com.example.sencsu.data.repository.SessionManager) {
     Surface(
         shape = CircleShape,
         color = Color.White.copy(alpha = 0.18f),
@@ -491,22 +511,12 @@ private fun ProfileAvatar(photoUrl: String?, initials: String) {
             modifier = Modifier.padding(6.dp)
         ) {
             Box(contentAlignment = Alignment.Center) {
-                if (photoUrl != null) {
-                    SubcomposeAsyncImage(
-                        model = photoUrl,
-                        contentDescription = "Photo de profil",
+                if (filename != null) {
+                    ServerImage(
+                        filename = filename,
+                        sessionManager = sessionManager,
                         modifier = Modifier.fillMaxSize().clip(CircleShape),
-                        contentScale = ContentScale.Crop,
-                        loading = {
-                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(22.dp),
-                                    strokeWidth = 2.dp,
-                                    color = AppColors.BrandBlue
-                                )
-                            }
-                        },
-                        error = { AvatarInitials(initials) }
+                        contentScale = ContentScale.Crop
                     )
                 } else {
                     AvatarInitials(initials)
@@ -603,6 +613,7 @@ private fun OverviewMetric(label: String, value: String, icon: ImageVector, modi
 
 @Composable
 private fun ProfileActionGrid(
+    isAgent: Boolean,
     onEdit: () -> Unit,
     onHistory: () -> Unit,
     onPassword: () -> Unit,
@@ -612,8 +623,10 @@ private fun ProfileActionGrid(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        QuickAction("Modifier", Icons.Rounded.Edit, AppColors.BrandBlue, onEdit, Modifier.weight(1f))
-        QuickAction("Historique", Icons.Rounded.MedicalServices, AppColors.ActionBlue, onHistory, Modifier.weight(1f))
+        if (!isAgent) {
+            QuickAction("Modifier", Icons.Rounded.Edit, AppColors.BrandBlue, onEdit, Modifier.weight(1f))
+            QuickAction("Historique", Icons.Rounded.MedicalServices, AppColors.ActionBlue, onHistory, Modifier.weight(1f))
+        }
         QuickAction("Securite", Icons.Rounded.Lock, AppColors.StatusOrange, onPassword, Modifier.weight(1f))
         QuickAction("Autres", Icons.Rounded.MoreHoriz, AppColors.TextSub, onMore, Modifier.weight(1f))
     }
@@ -697,7 +710,7 @@ private fun ProfileInfoRow(icon: ImageVector, label: String, value: String) {
 }
 
 @Composable
-private fun DocumentsSection(rectoUrl: String?, versoUrl: String?, onOpen: (String) -> Unit) {
+private fun DocumentsSection(rectoFilename: String?, versoFilename: String?, sessionManager: com.example.sencsu.data.repository.SessionManager, onOpen: (String) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
             "Documents",
@@ -707,8 +720,8 @@ private fun DocumentsSection(rectoUrl: String?, versoUrl: String?, onOpen: (Stri
             modifier = Modifier.padding(horizontal = 4.dp)
         )
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            DocumentPhotoCard("Piece recto", rectoUrl, onOpen, Modifier.weight(1f))
-            DocumentPhotoCard("Piece verso", versoUrl, onOpen, Modifier.weight(1f))
+            DocumentPhotoCard("Piece recto", rectoFilename, sessionManager, onOpen, Modifier.weight(1f))
+            DocumentPhotoCard("Piece verso", versoFilename, sessionManager, onOpen, Modifier.weight(1f))
         }
     }
 }
@@ -716,7 +729,8 @@ private fun DocumentsSection(rectoUrl: String?, versoUrl: String?, onOpen: (Stri
 @Composable
 private fun DocumentPhotoCard(
     title: String,
-    photoUrl: String?,
+    filename: String?,
+    sessionManager: com.example.sencsu.data.repository.SessionManager,
     onOpen: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -727,17 +741,14 @@ private fun DocumentPhotoCard(
         border = BorderStroke(1.dp, AppColors.BorderColorLight)
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
-            if (photoUrl != null) {
-                SubcomposeAsyncImage(
-                    model = photoUrl,
-                    contentDescription = title,
-                    modifier = Modifier.fillMaxSize().clickable { onOpen(photoUrl) },
-                    contentScale = ContentScale.Crop,
-                    loading = {
-                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(22.dp))
-                        }
-                    }
+            if (filename != null) {
+                ServerImage(
+                    filename = filename,
+                    sessionManager = sessionManager,
+                    modifier = Modifier.fillMaxSize().clickable { 
+                        ApiConfig.getImageUrl(filename)?.let { onOpen(it) } 
+                    },
+                    contentScale = ContentScale.Crop
                 )
             } else {
                 Column(

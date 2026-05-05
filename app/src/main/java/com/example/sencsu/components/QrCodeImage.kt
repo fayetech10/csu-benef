@@ -9,6 +9,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.qrcode.QRCodeWriter
+import com.example.sencsu.configs.ApiConfig
 
 @Composable
 fun QrCodeImage(
@@ -23,6 +24,15 @@ fun QrCodeImage(
         modifier = modifier,
         contentScale = ContentScale.Fit
     )
+}
+
+/**
+ * Construit l'URL dynamique pour le QR Code en utilisant un schéma personnalisé.
+ * Ce schéma (sencsu://) permet d'ouvrir l'application peu importe l'adresse IP du serveur.
+ * ex: sencsu://adherent?matricule=XXXXX
+ */
+fun buildBeneficiaryQrUrl(matricule: String): String {
+    return "sencsu://adherent?matricule=$matricule"
 }
 
 private fun generateQrBitmap(value: String, size: Int): Bitmap {

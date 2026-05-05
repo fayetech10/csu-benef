@@ -1,19 +1,27 @@
 package com.example.sencsu.screen
 
 import android.util.Log
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
+import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.Badge
+import androidx.compose.material.icons.rounded.OpenInNew
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -26,6 +34,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.sencsu.data.remote.dto.AdherentDto
 import com.example.sencsu.domain.viewmodel.ScannerViewModel
 import com.example.sencsu.theme.AppColors
+import com.example.sencsu.theme.AppGradients
 import com.example.sencsu.theme.AppShapes
 import com.google.mlkit.vision.barcode.BarcodeScannerOptions
 import com.google.mlkit.vision.barcode.BarcodeScanning
@@ -36,20 +45,60 @@ import java.util.concurrent.Executors
 @Composable
 fun QrScannerScreen(
     onDismiss: () -> Unit,
+    onNavigateToDetails: (adherentId: String) -> Unit = {},
     viewModel: ScannerViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     
+    // Gestion des permissions
+    val context = LocalContext.current
+    var hasCameraPermission by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(
+                context,
+                android.Manifest.permission.CAMERA
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        )
+    }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.RequestPermission(),
+        onResult = { granted ->
+            hasCameraPermission = granted
+        }
+    )
+
+    LaunchedEffect(Unit) {
+        if (!hasCameraPermission) {
+            permissionLauncher.launch(android.Manifest.permission.CAMERA)
+        }
+    }
+    
     Box(modifier = Modifier.fillMaxSize()) {
         // Scanner View
         if (uiState.scannedAdherent == null) {
-            CameraPreview(
-                onBarcodeDetected = { barcodes ->
-                    barcodes.firstOrNull()?.rawValue?.let { value ->
-                        viewModel.onScanResult(value)
+            if (hasCameraPermission) {
+                CameraPreview(
+                    onBarcodeDetected = { barcodes ->
+                        barcodes.firstOrNull()?.rawValue?.let { value ->
+                            viewModel.onScanResult(value)
+                        }
                     }
+                )
+            } else {
+                // Écran en attendant la permission
+                Box(
+                    modifier = Modifier.fillMaxSize().background(Color.Black),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        "L'accès à la caméra est requis pour scanner.",
+                        color = Color.White,
+                        modifier = Modifier.padding(16.dp),
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
                 }
-            )
+            }
             
             // Scanner Overlay
             ScannerOverlay(onClose = onDismiss)
@@ -63,7 +112,11 @@ fun QrScannerScreen(
                     .background(Color.Black.copy(alpha = 0.5f)),
                 contentAlignment = Alignment.Center
             ) {
-                CircularProgressIndicator(color = Color.White)
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    CircularProgressIndicator(color = Color.White)
+                    Spacer(Modifier.height(12.dp))
+                    Text("Identification en cours...", color = Color.White, fontSize = 14.sp)
+                }
             }
         }
 
@@ -81,12 +134,20 @@ fun QrScannerScreen(
             )
         }
 
-        // Result Dialog
+        // Result Card - Modern overlay instead of dialog
         if (uiState.scannedAdherent != null) {
-            AdherentResultDialog(
+            AdherentResultOverlay(
                 adherent = uiState.scannedAdherent!!,
                 onDismiss = { viewModel.reset() },
-                onConfirm = { 
+                onViewDetails = {
+                    val adherent = uiState.scannedAdherent!!
+                    val id = adherent.id
+                    if (id != null) {
+                        viewModel.reset()
+                        onNavigateToDetails(id)
+                    }
+                },
+                onClose = {
                     viewModel.reset()
                     onDismiss()
                 }
@@ -211,108 +272,190 @@ private fun ScannerOverlay(onClose: () -> Unit) {
     }
 }
 
+/**
+ * Overlay moderne qui s'affiche après un scan réussi.
+ * Remplace le dialog basique par une carte premium avec navigation vers les détails.
+ */
 @Composable
-private fun AdherentResultDialog(
+private fun AdherentResultOverlay(
     adherent: AdherentDto,
     onDismiss: () -> Unit,
-    onConfirm: () -> Unit
+    onViewDetails: () -> Unit,
+    onClose: () -> Unit
 ) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { 
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    Icons.Rounded.CheckCircle, 
-                    contentDescription = null, 
-                    tint = AppColors.StatusGreen
-                )
-                Spacer(Modifier.width(8.dp))
-                Text("Adhérent Identifié")
-            }
-        },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(
-                    "${adherent.prenoms ?: ""} ${adherent.nom ?: ""}".trim(), 
-                    fontWeight = FontWeight.Bold, 
-                    fontSize = 18.sp,
-                    color = AppColors.TextMain
-                )
-                Text("Matricule: ${adherent.matricule ?: "N/A"}", color = AppColors.TextSub)
-                Text("CNI: ${adherent.numeroCNi ?: "N/A"}", color = AppColors.TextSub)
-                
-                Spacer(Modifier.height(12.dp))
-                
-                Surface(
-                    color = if (adherent.actif == true) AppColors.StatusGreen.copy(alpha = 0.1f) else AppColors.StatusRed.copy(alpha = 0.1f),
-                    shape = AppShapes.MediumRadius
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.6f)),
+        contentAlignment = Alignment.Center
+    ) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp),
+            shape = AppShapes.LargeRadius,
+            colors = CardDefaults.cardColors(containerColor = AppColors.SurfaceBackground),
+            elevation = CardDefaults.cardElevation(defaultElevation = 16.dp)
+        ) {
+            Column {
+                // ── En-tête dégradé ──
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Brush.horizontalGradient(AppGradients.Brand))
+                        .padding(20.dp)
                 ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(8.dp)
-                                .background(if (adherent.actif == true) AppColors.StatusGreen else AppColors.StatusRed, CircleShape)
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            if (adherent.actif == true) "STATUT ACTIF" else "STATUT INACTIF",
-                            color = if (adherent.actif == true) AppColors.StatusGreen else AppColors.StatusRed,
-                            fontWeight = FontWeight.Black,
-                            fontSize = 12.sp
-                        )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Surface(
+                            shape = CircleShape,
+                            color = Color.White.copy(alpha = 0.2f),
+                            modifier = Modifier.size(48.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    Icons.Rounded.CheckCircle,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(28.dp)
+                                )
+                            }
+                        }
+                        Spacer(Modifier.width(14.dp))
+                        Column {
+                            Text(
+                                "Bénéficiaire identifié",
+                                color = Color.White,
+                                fontWeight = FontWeight.Black,
+                                fontSize = 18.sp
+                            )
+                            Text(
+                                "Scan QR réussi",
+                                color = Color.White.copy(alpha = 0.75f),
+                                fontSize = 13.sp
+                            )
+                        }
                     }
                 }
-                
-                if (adherent.coveragePeriod != null) {
-                    val progress = try {
-                        val created = java.time.LocalDateTime.parse(adherent.createdAt)
-                        val now = java.time.LocalDateTime.now()
-                        val end = created.plusYears(1)
-                        val totalDays = java.time.temporal.ChronoUnit.DAYS.between(created, end).toFloat()
-                        val elapsedDays = java.time.temporal.ChronoUnit.DAYS.between(created, now).toFloat()
-                        (elapsedDays / totalDays).coerceIn(0f, 1f)
-                    } catch (e: Exception) { 0.1f }
 
-                    Spacer(Modifier.height(12.dp))
+                // ── Contenu ──
+                Column(
+                    modifier = Modifier.padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    // Nom complet
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Surface(
+                            shape = CircleShape,
+                            color = AppColors.BrandBlueLite,
+                            modifier = Modifier.size(52.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Text(
+                                    "${adherent.prenoms?.firstOrNull()?.uppercase() ?: ""}${adherent.nom?.firstOrNull()?.uppercase() ?: ""}",
+                                    fontWeight = FontWeight.Black,
+                                    fontSize = 18.sp,
+                                    color = AppColors.BrandBlue
+                                )
+                            }
+                        }
+                        Spacer(Modifier.width(14.dp))
+                        Column {
+                            Text(
+                                "${adherent.prenoms ?: ""} ${adherent.nom ?: ""}".trim().ifEmpty { "Inconnu" },
+                                fontWeight = FontWeight.Black,
+                                fontSize = 17.sp,
+                                color = AppColors.TextMain
+                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Rounded.Badge, null, tint = AppColors.TextSub, modifier = Modifier.size(14.dp))
+                                Spacer(Modifier.width(4.dp))
+                                Text(
+                                    adherent.matricule ?: "N/A",
+                                    color = AppColors.TextSub,
+                                    fontSize = 13.sp
+                                )
+                            }
+                        }
+                    }
+
+                    HorizontalDivider(color = AppColors.BorderColorLight)
+
+                    // Statut
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            "Validité: ${adherent.coveragePeriod}",
-                            fontSize = 13.sp,
-                            color = AppColors.TextMain,
-                            fontWeight = FontWeight.Medium
-                        )
-                        Text(
-                            "${(progress * 100).toInt()}%",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = AppColors.BrandBlue
-                        )
+                        Text("Statut couverture", color = AppColors.TextSub, fontSize = 13.sp)
+                        Surface(
+                            shape = RoundedCornerShape(20.dp),
+                            color = if (adherent.actif == true) AppColors.StatusGreen.copy(alpha = 0.1f) else AppColors.StatusRed.copy(alpha = 0.1f)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(8.dp)
+                                        .background(
+                                            if (adherent.actif == true) AppColors.StatusGreen else AppColors.StatusRed,
+                                            CircleShape
+                                        )
+                                )
+                                Spacer(Modifier.width(6.dp))
+                                Text(
+                                    if (adherent.actif == true) "ACTIF" else "INACTIF",
+                                    color = if (adherent.actif == true) AppColors.StatusGreen else AppColors.StatusRed,
+                                    fontWeight = FontWeight.Black,
+                                    fontSize = 11.sp
+                                )
+                            }
+                        }
                     }
+
+                    // Période de couverture
+                    if (adherent.coveragePeriod != null) {
+                        InfoRow("Validité", adherent.coveragePeriod)
+                    }
+                    InfoRow("CNI", adherent.numeroCNi ?: "N/A")
+
                     Spacer(Modifier.height(4.dp))
-                    LinearProgressIndicator(
-                        progress = { progress },
-                        modifier = Modifier.fillMaxWidth().height(6.dp),
-                        color = AppColors.BrandBlue,
-                        trackColor = AppColors.BrandBlue.copy(alpha = 0.1f),
-                        strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
-                    )
+
+                    // ── Boutons d'action ──
+                    Button(
+                        onClick = onViewDetails,
+                        modifier = Modifier.fillMaxWidth().height(50.dp),
+                        shape = AppShapes.MediumRadius,
+                        colors = ButtonDefaults.buttonColors(containerColor = AppColors.BrandBlue),
+                        enabled = adherent.id != null
+                    ) {
+                        Icon(Icons.Rounded.OpenInNew, null, modifier = Modifier.size(20.dp))
+                        Spacer(Modifier.width(10.dp))
+                        Text("Voir le profil complet", fontWeight = FontWeight.Black, fontSize = 15.sp)
+                    }
+
+                    OutlinedButton(
+                        onClick = onClose,
+                        modifier = Modifier.fillMaxWidth().height(46.dp),
+                        shape = AppShapes.MediumRadius,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, AppColors.BorderColor)
+                    ) {
+                        Text("Fermer", color = AppColors.TextSub, fontWeight = FontWeight.Bold)
+                    }
                 }
             }
-        },
-        confirmButton = {
-            Button(
-                onClick = onConfirm,
-                colors = ButtonDefaults.buttonColors(containerColor = AppColors.BrandBlue)
-            ) {
-                Text("Terminer")
-            }
         }
-    )
+    }
+}
+
+@Composable
+private fun InfoRow(label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(label, color = AppColors.TextSub, fontSize = 13.sp)
+        Text(value, color = AppColors.TextMain, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+    }
 }

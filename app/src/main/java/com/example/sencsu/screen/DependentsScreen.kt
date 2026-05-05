@@ -634,7 +634,7 @@ private fun QrPreview(member: PersonneChargeDto) {
                 }
             } else {
                 QrCodeImage(
-                    value = member.matricule,
+                    value = com.example.sencsu.components.buildBeneficiaryQrUrl(member.matricule!!),
                     modifier = Modifier.padding(8.dp).fillMaxSize()
                 )
             }

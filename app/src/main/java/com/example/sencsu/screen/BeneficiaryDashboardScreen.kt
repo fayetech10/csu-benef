@@ -91,6 +91,7 @@ import coil.compose.AsyncImage
 import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
 import com.example.sencsu.components.QrCodeImage
+import com.example.sencsu.components.ServerImage
 import com.example.sencsu.configs.ApiConfig
 import com.example.sencsu.data.remote.dto.AdherentDto
 import com.example.sencsu.data.remote.dto.PersonneChargeDto
@@ -137,7 +138,7 @@ fun BeneficiaryDashboardScreen(
             item {
                 HomeHero(
                     adherent = adherent,
-                    token = token,
+                    sessionManager = viewModel.sessionManager,
                     isLoading = uiState.isLoading,
                     onProfileClick = onProfileClick,
                     onRefresh = { viewModel.refresh() }
@@ -210,7 +211,7 @@ fun BeneficiaryDashboardScreen(
                     item { FamilyEmptyPreview() }
                 } else {
                     items(adherent.personnesCharge.take(3), key = { it.id ?: it.displayName }) { member ->
-                        FamilyPreviewRow(member = member)
+                        FamilyPreviewRow(member = member, sessionManager = viewModel.sessionManager)
                     }
                 }
 
@@ -245,7 +246,7 @@ private fun AnimatedBlock(
 @Composable
 private fun HomeHero(
     adherent: AdherentDto?,
-    token: String?,
+    sessionManager: com.example.sencsu.data.repository.SessionManager,
     isLoading: Boolean,
     onProfileClick: () -> Unit,
     onRefresh: () -> Unit
@@ -293,15 +294,10 @@ private fun HomeHero(
                     shadowElevation = 8.dp
                 ) {
                     Box(contentAlignment = Alignment.Center) {
-                        val photoUrl = ApiConfig.getImageUrl(adherent?.photo)
-                        if (photoUrl != null) {
-                            AsyncImage(
-                                model = ImageRequest.Builder(context)
-                                    .data(photoUrl)
-                                    .apply { token?.let { addHeader("Authorization", "Bearer $it") } }
-                                    .crossfade(true)
-                                    .build(),
-                                contentDescription = "Profil",
+                        if (adherent?.photo != null) {
+                            ServerImage(
+                                filename = adherent.photo,
+                                sessionManager = sessionManager,
                                 modifier = Modifier.fillMaxSize().clip(CircleShape),
                                 contentScale = ContentScale.Crop
                             )
@@ -671,7 +667,7 @@ private fun EmptyActivityCard(onHistory: () -> Unit) {
 }
 
 @Composable
-private fun FamilyPreviewRow(member: PersonneChargeDto) {
+private fun FamilyPreviewRow(member: PersonneChargeDto, sessionManager: com.example.sencsu.data.repository.SessionManager) {
     Card(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 5.dp),
         shape = AppShapes.LargeRadius,
@@ -681,7 +677,16 @@ private fun FamilyPreviewRow(member: PersonneChargeDto) {
         Row(modifier = Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
             Surface(shape = CircleShape, color = AppColors.BrandBlueLite, modifier = Modifier.size(48.dp)) {
                 Box(contentAlignment = Alignment.Center) {
-                    Text(member.initials, fontWeight = FontWeight.Black, color = AppColors.BrandBlue)
+                    if (member.photo != null) {
+                        ServerImage(
+                            filename = member.photo,
+                            sessionManager = sessionManager,
+                            modifier = Modifier.fillMaxSize().clip(CircleShape),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Text(member.initials, fontWeight = FontWeight.Black, color = AppColors.BrandBlue)
+                    }
                 }
             }
             Spacer(Modifier.width(12.dp))
@@ -700,7 +705,7 @@ private fun FamilyPreviewRow(member: PersonneChargeDto) {
                         Icon(Icons.Rounded.QrCode, null, tint = AppColors.TextDisabled, modifier = Modifier.size(24.dp))
                     } else {
                         QrCodeImage(
-                            value = member.matricule,
+                            value = com.example.sencsu.components.buildBeneficiaryQrUrl(member.matricule!!),
                             modifier = Modifier.padding(5.dp).fillMaxSize()
                         )
                     }
