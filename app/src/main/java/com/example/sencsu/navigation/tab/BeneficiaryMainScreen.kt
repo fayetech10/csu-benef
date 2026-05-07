@@ -73,6 +73,9 @@ fun BeneficiaryMainScreen(rootNavController: NavController) {
                     },
                     onNavigateToCard = { adherentId ->
                         rootNavController.navigate(Screen.DigitalCard.createRoute(adherentId))
+                    },
+                    onNavigateToRenewal = {
+                        rootNavController.navigate(Screen.Renewal.route)
                     }
                 )
             }

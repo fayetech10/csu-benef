@@ -17,6 +17,9 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+import com.google.firebase.messaging.FirebaseMessaging
+import kotlinx.coroutines.tasks.await
+
 @HiltViewModel
 class BeneficiaryDashboardViewModel @Inject constructor(
     private val adherentRepository: IAdherentRepository,
@@ -47,11 +50,25 @@ class BeneficiaryDashboardViewModel @Inject constructor(
                 .onSuccess { adherent ->
                     _uiState.update { it.copy(adherent = adherent, isLoading = false) }
                     // Charger les services médicaux récents
-                    adherent.id?.let { loadRecentServices(it) }
+                    adherent.id?.let { 
+                        loadRecentServices(it) 
+                        syncFcmToken(it) // Synchroniser le token FCM
+                    }
                 }
                 .onFailure { error ->
                     _uiState.update { it.copy(error = error.message ?: "Erreur de chargement", isLoading = false) }
                 }
+        }
+    }
+
+    private fun syncFcmToken(userId: String) {
+        viewModelScope.launch {
+            try {
+                val token = FirebaseMessaging.getInstance().token.await()
+                adherentRepository.registerFcmToken(userId, token)
+            } catch (e: Exception) {
+                // Silently fail for token sync
+            }
         }
     }
 

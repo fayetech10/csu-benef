@@ -211,7 +211,7 @@ fun HealthInsuranceCard(
                         InfoField(label = "Nom", value = data.nom)
                         InfoField(label = "Prénom(s)", value = data.prenoms)
                         InfoField(label = "N° Immatriculation", value = data.matricule)
-                        InfoField(label = "Carte émise le", value = data.createdAt)
+                        InfoField(label = "Validité", value = data.coveragePeriod)
                     }
 
                     // QR Code (droite)

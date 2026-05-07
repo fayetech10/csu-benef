@@ -32,6 +32,9 @@ interface PaiementDao {
     @Query("SELECT * FROM paiements WHERE isSynced = 0")
     fun observeUnsyncedPaiements(): Flow<List<PaiementEntity>>
     
+    @Query("DELETE FROM paiements WHERE localId = :localId")
+    suspend fun deleteById(localId: Long)
+    
     @Query("DELETE FROM paiements")
     suspend fun clearAll()
 }

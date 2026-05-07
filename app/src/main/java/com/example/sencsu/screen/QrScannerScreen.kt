@@ -1,7 +1,9 @@
 package com.example.sencsu.screen
 
+import android.os.Build
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.annotation.RequiresApi
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
@@ -42,6 +44,7 @@ import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
 import java.util.concurrent.Executors
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun QrScannerScreen(
     onDismiss: () -> Unit,
@@ -282,6 +285,7 @@ private fun ScannerOverlay(onClose: () -> Unit) {
  * Overlay moderne qui s'affiche après un scan réussi.
  * Remplace le dialog basique par une carte premium avec navigation vers les détails.
  */
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 private fun AdherentResultOverlay(
     adherent: AdherentDto,
@@ -386,16 +390,15 @@ private fun AdherentResultOverlay(
 
                     HorizontalDivider(color = AppColors.BorderColorLight)
 
-                    // Statut
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
+                        // Statut dynamique (Actif + Date)
+                        val endDate = com.example.sencsu.utils.Formatters.getCoverageEndDate(adherent.coveragePeriod)
+                        val isExpired = endDate != null && endDate.isBefore(java.time.LocalDate.now())
+                        val isTrulyActive = adherent.actif == true && !isExpired
+                        
                         Text("Statut couverture", color = AppColors.TextSub, fontSize = 13.sp)
                         Surface(
                             shape = RoundedCornerShape(20.dp),
-                            color = if (adherent.actif == true) AppColors.StatusGreen.copy(alpha = 0.1f) else AppColors.StatusRed.copy(alpha = 0.1f)
+                            color = if (isTrulyActive) AppColors.StatusGreen.copy(alpha = 0.1f) else AppColors.StatusRed.copy(alpha = 0.1f)
                         ) {
                             Row(
                                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
@@ -405,14 +408,14 @@ private fun AdherentResultOverlay(
                                     modifier = Modifier
                                         .size(8.dp)
                                         .background(
-                                            if (adherent.actif == true) AppColors.StatusGreen else AppColors.StatusRed,
+                                            if (isTrulyActive) AppColors.StatusGreen else AppColors.StatusRed,
                                             CircleShape
                                         )
                                 )
                                 Spacer(Modifier.width(6.dp))
                                 Text(
-                                    if (adherent.actif == true) "ACTIF" else "INACTIF",
-                                    color = if (adherent.actif == true) AppColors.StatusGreen else AppColors.StatusRed,
+                                    if (isTrulyActive) "ACTIF" else if (isExpired) "EXPIRÉ" else "INACTIF",
+                                    color = if (isTrulyActive) AppColors.StatusGreen else AppColors.StatusRed,
                                     fontWeight = FontWeight.Black,
                                     fontSize = 11.sp
                                 )
@@ -453,7 +456,9 @@ private fun AdherentResultOverlay(
             }
         }
     }
-}
+
+
+
 
 @Composable
 private fun InfoRow(label: String, value: String) {

@@ -7,6 +7,7 @@ package com.example.sencsu.configs
 object ApiConfig {
     // ── URL du backend local ──
     const val BASE_URL = "http://192.168.1.12:8080/"
+//    const val BASE_URL = "http://localhost:8080/"
 
     private const val FILES_ENDPOINT = "api/files/"
     private const val QR_CODE_ENDPOINT = "api/adherents/qr/"

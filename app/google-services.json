@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "663146070979",
+    "project_id": "sen-csu-814d5",
+    "storage_bucket": "sen-csu-814d5.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:663146070979:android:8f844629ebe18a8a7df376",
+        "android_client_info": {
+          "package_name": "com.example.sencsu"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB_48__7aALFO6tDRMO4TwQ1jQyaoKOdtQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

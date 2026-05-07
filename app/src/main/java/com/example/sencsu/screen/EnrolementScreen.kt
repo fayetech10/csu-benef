@@ -32,7 +32,11 @@ import com.example.sencsu.screen.enrolement.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun EnrolementScreen(onSuccess: (AddAdherentUiEvent.NavigateToPasswordUpdate) -> Unit, onBack: () -> Unit) {
+fun EnrolementScreen(
+    onSuccess: (AddAdherentUiEvent.NavigateToPasswordUpdate) -> Unit,
+    onNavigateToPayment: (AddAdherentUiEvent.NavigateToPayment) -> Unit,
+    onBack: () -> Unit
+) {
     val ocrViewModel: OcrViewModel = hiltViewModel()
     val addAdherentViewModel: AddAdherentViewModel = hiltViewModel()
     val ocrState by ocrViewModel.uiState.collectAsState()
@@ -55,6 +59,7 @@ fun EnrolementScreen(onSuccess: (AddAdherentUiEvent.NavigateToPasswordUpdate) ->
     var telephone by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var adresse by remember { mutableStateOf("") }
+    var photoUri by remember { mutableStateOf<Uri?>(null) }
 
     // ── Personnes à charge (liste dynamique) ──
     var personnesCharge by remember { mutableStateOf(listOf<PersonneChargeForm>()) }
@@ -64,7 +69,7 @@ fun EnrolementScreen(onSuccess: (AddAdherentUiEvent.NavigateToPasswordUpdate) ->
     var rectoUri by remember { mutableStateOf<Uri?>(null) }
     var versoUri by remember { mutableStateOf<Uri?>(null) }
     var tempCameraUri by remember { mutableStateOf<Uri?>(null) }
-    var captureTarget by remember { mutableStateOf("recto") } // "recto" ou "verso"
+    var captureTarget by remember { mutableStateOf("recto") } // "recto", "verso", "photo"
 
     var isSubmitting by remember { mutableStateOf(false) }
     var ocrApplied by remember { mutableStateOf(false) }
@@ -73,9 +78,8 @@ fun EnrolementScreen(onSuccess: (AddAdherentUiEvent.NavigateToPasswordUpdate) ->
         addAdherentViewModel.uiEvent.collect { event ->
             when (event) {
                 is AddAdherentUiEvent.NavigateToPayment -> {
-                    // isSubmitting = false
-                    // newAdherentId = event.adherentId ?: ""
-                    // showSuccess = true
+                    isSubmitting = false
+                    onNavigateToPayment(event)
                 }
                 is AddAdherentUiEvent.NavigateToPasswordUpdate -> {
                     isSubmitting = false
@@ -119,14 +123,20 @@ fun EnrolementScreen(onSuccess: (AddAdherentUiEvent.NavigateToPasswordUpdate) ->
         ActivityResultContracts.TakePicture()
     ) { success ->
         if (success && tempCameraUri != null) {
-            if (captureTarget == "recto") {
-                rectoUri = tempCameraUri
-                ocrViewModel.setRectoUri(tempCameraUri)
-                ocrViewModel.processRectoImage(context, tempCameraUri!!)
-            } else {
-                versoUri = tempCameraUri
-                ocrViewModel.setVersoUri(tempCameraUri)
-                ocrViewModel.processVersoImage(context, tempCameraUri!!)
+            when (captureTarget) {
+                "recto" -> {
+                    rectoUri = tempCameraUri
+                    ocrViewModel.setRectoUri(tempCameraUri)
+                    ocrViewModel.processRectoImage(context, tempCameraUri!!)
+                }
+                "verso" -> {
+                    versoUri = tempCameraUri
+                    ocrViewModel.setVersoUri(tempCameraUri)
+                    ocrViewModel.processVersoImage(context, tempCameraUri!!)
+                }
+                "photo" -> {
+                    photoUri = tempCameraUri
+                }
             }
         }
     }
@@ -135,21 +145,27 @@ fun EnrolementScreen(onSuccess: (AddAdherentUiEvent.NavigateToPasswordUpdate) ->
         ActivityResultContracts.GetContent()
     ) { uri ->
         uri?.let {
-            if (captureTarget == "recto") {
-                rectoUri = it
-                ocrViewModel.setRectoUri(it)
-                ocrViewModel.processRectoImage(context, it)
-            } else {
-                versoUri = it
-                ocrViewModel.setVersoUri(it)
-                ocrViewModel.processVersoImage(context, it)
+            when (captureTarget) {
+                "recto" -> {
+                    rectoUri = it
+                    ocrViewModel.setRectoUri(it)
+                    ocrViewModel.processRectoImage(context, it)
+                }
+                "verso" -> {
+                    versoUri = it
+                    ocrViewModel.setVersoUri(it)
+                    ocrViewModel.processVersoImage(context, it)
+                }
+                "photo" -> {
+                    photoUri = it
+                }
             }
         }
     }
 
     fun launchCamera(target: String) {
         captureTarget = target
-        val tempFile = File.createTempFile("cni_${target}_", ".jpg", context.cacheDir)
+        val tempFile = File.createTempFile("sen_${target}_", ".jpg", context.cacheDir)
             .apply { deleteOnExit() }
         val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", tempFile)
         tempCameraUri = uri
@@ -160,8 +176,6 @@ fun EnrolementScreen(onSuccess: (AddAdherentUiEvent.NavigateToPasswordUpdate) ->
         captureTarget = target
         galleryLauncher.launch("image/*")
     }
-
-
 
     Scaffold(
         containerColor = AppColors.AppBackground,
@@ -207,23 +221,6 @@ fun EnrolementScreen(onSuccess: (AddAdherentUiEvent.NavigateToPasswordUpdate) ->
                                 currentStep++
                             } else {
                                 isSubmitting = true
-                                // Update viewmodel with local state
-                                addAdherentViewModel.updateNom(nom)
-                                addAdherentViewModel.updatePrenoms(prenom)
-                                addAdherentViewModel.updateDateNaissance(dateNaissance)
-                                addAdherentViewModel.updateSexe(sexe)
-                                addAdherentViewModel.updateLieuNaissance(lieuNaissance)
-                                addAdherentViewModel.updateCommune(commune)
-                                addAdherentViewModel.updateDepartement(departement)
-                                addAdherentViewModel.updateNumeroCNI(nin)
-                                addAdherentViewModel.updateWhatsapp(telephone)
-                                // We default to CNI
-                                addAdherentViewModel.updateTypePiece("CNI")
-                                addAdherentViewModel.updateAdresse(adresse)
-                                
-                                // Map personnesCharge
-                                // AddAdherentViewModel handles them via its internal state.
-                                // We'll just submit the ones we have by clearing and adding them.
                                 addAdherentViewModel.resetForm()
                                 addAdherentViewModel.updateNom(nom)
                                 addAdherentViewModel.updatePrenoms(prenom)
@@ -237,7 +234,8 @@ fun EnrolementScreen(onSuccess: (AddAdherentUiEvent.NavigateToPasswordUpdate) ->
                                 addAdherentViewModel.updateTypePiece("CNI")
                                 addAdherentViewModel.updateAdresse(adresse)
                                 
-                                // Set URIs
+                                // Photos
+                                addAdherentViewModel.updatePhotoUri(photoUri)
                                 addAdherentViewModel.updateRectoUri(rectoUri)
                                 addAdherentViewModel.updateVersoUri(versoUri)
 
@@ -322,6 +320,9 @@ fun EnrolementScreen(onSuccess: (AddAdherentUiEvent.NavigateToPasswordUpdate) ->
                             commune = commune, onCommuneChange = { commune = it },
                             departement = departement, onDepartementChange = { departement = it },
                             nin = nin, onNinChange = { nin = it },
+                            photoUri = photoUri,
+                            onPhotoCapture = { launchCamera("photo") },
+                            onPhotoGallery = { launchGallery("photo") },
                             isFromOcr = ocrApplied
                         )
                         3 -> CoordinatesStep(

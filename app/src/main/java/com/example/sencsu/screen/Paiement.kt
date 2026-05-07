@@ -54,6 +54,7 @@ fun Paiement(
     adherentId: String?,
     localAdherentId: Long?,
     montantTotal: Double?,
+    nextRoute: String? = null,
     navController: NavController,
     viewModel: PaiementViewModel = hiltViewModel()
 ) {
@@ -76,7 +77,8 @@ fun Paiement(
     // Redirect after success
     LaunchedEffect(state.isSuccess) {
         if (state.isSuccess) {
-            navController.navigate("main_tabs") {
+            val target = nextRoute ?: "main_tabs"
+            navController.navigate(target) {
                 popUpTo("paiement") { inclusive = true }
             }
         }
@@ -186,7 +188,13 @@ fun Paiement(
             // Payment Mode Dropdown
             ModePaiementDropdown(
                 selectedMode = state.modePaiement,
-                onModeSelected = viewModel::updateMode
+                onModeSelected = { mode ->
+                    viewModel.updateMode(mode)
+                    // Si Wave ou Orange Money, on tente l'ouverture automatique
+                    if (mode == "Wave" || mode == "Orange Money") {
+                        launchMobileMoneyApp(context, mode, state.montantTotal)
+                    }
+                }
             )
 
             if (isMobileMoneyMode) {
@@ -540,48 +548,48 @@ private fun launchMobileMoneyApp(
     montant: Double?
 ) {
     val amountText = (montant ?: 0.0).toInt().toString()
-    val deepLink = when (mode) {
-        "Wave" -> "wave://payment?amount=$amountText"
-        "Orange Money" -> "tel:*144%23"
-        else -> null
+    
+    val launched = when (mode) {
+        "Wave" -> {
+            val intent = context.packageManager.getLaunchIntentForPackage("com.wave.personal")
+            if (intent != null) {
+                context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                true
+            } else {
+                runCatching {
+                    context.startActivity(
+                        Intent(Intent.ACTION_VIEW, Uri.parse("wave://payment?amount=$amountText"))
+                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    )
+                    true
+                }.getOrDefault(false)
+            }
+        }
+        "Orange Money" -> {
+            runCatching {
+                // Code USSD pour Orange Money Sénégal (#144#)
+                val ussd = Uri.parse("tel:" + Uri.encode("#144#"))
+                context.startActivity(Intent(Intent.ACTION_DIAL, ussd).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                true
+            }.getOrDefault(false)
+        }
+        else -> false
     }
 
-    val packageName = when (mode) {
-        "Wave" -> "com.wave.personal"
-        "Orange Money" -> "com.orange.myorange"
-        else -> null
-    }
-
-    val launched = deepLink?.let {
-        runCatching {
-            context.startActivity(
-                Intent(Intent.ACTION_VIEW, Uri.parse(it))
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            )
-            true
-        }.getOrDefault(false)
-    } ?: false
-
-    if (!launched) {
-        val fallbackIntent = packageName?.let {
-            context.packageManager.getLaunchIntentForPackage(it)
+    if (!launched && (mode == "Wave" || mode == "Orange Money")) {
+        val storeUrl = if (mode == "Wave") {
+            "https://play.google.com/store/apps/details?id=com.wave.personal"
+        } else {
+            "https://play.google.com/store/apps/details?id=com.orange.myorange"
         }
-
-        if (fallbackIntent != null) {
-            context.startActivity(fallbackIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-            return
-        }
-
-        val query = URLEncoder.encode(mode, "UTF-8")
-        val storeIntent = Intent(
-            Intent.ACTION_VIEW,
-            Uri.parse("https://play.google.com/store/search?q=$query&c=apps")
-        ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        
+        val storeIntent = Intent(Intent.ACTION_VIEW, Uri.parse(storeUrl))
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 
         runCatching { context.startActivity(storeIntent) }
         Toast.makeText(
             context,
-            "Application $mode introuvable. Recherche ouverte sur Play Store.",
+            "Application $mode introuvable. Redirection vers le Play Store...",
             Toast.LENGTH_LONG
         ).show()
     }

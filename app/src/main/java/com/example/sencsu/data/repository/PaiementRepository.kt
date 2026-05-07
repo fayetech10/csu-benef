@@ -16,7 +16,7 @@ class PaiementRepository @Inject constructor(
 ) : IPaiementRepository {
 
     override suspend fun getPaiementsByAdherentId(adherentId: String): List<PaiementDto> {
-        return apiService.getPaiementsByAdherentId(adherentId)
+        return apiService.getPaiementsByAdherentId(adherentId).data
     }
 
     override suspend fun addPaiement(paiement: PaiementDto): Result<Unit> {

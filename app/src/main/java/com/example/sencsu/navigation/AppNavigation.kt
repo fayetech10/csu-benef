@@ -20,6 +20,7 @@ import com.example.sencsu.screen.SplashScreen
 import com.example.sencsu.screen.QrScannerScreen
 import com.example.sencsu.screen.DeepLinkResolverScreen
 import com.example.sencsu.screen.Paiement
+import com.example.sencsu.screen.RenewalScreen
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
 import androidx.navigation.navDeepLink
@@ -98,8 +99,32 @@ fun AppNavigation(
             EnrolementScreen(
                 onSuccess = { event ->
                     navController.navigate(
-                        Screen.PasswordUpdate.route +
-                            "/${event.adherentId}/${event.matricule}/${event.defaultPassword}"
+                        Screen.PasswordUpdate.createRoute(
+                            event.adherentId,
+                            event.matricule,
+                            event.defaultPassword
+                        )
+                    ) {
+                        popUpTo(Screen.Enrollment.route) { inclusive = true }
+                    }
+                },
+                onNavigateToPayment = { event ->
+                    // On définit la route suivante comme étant la mise à jour du mot de passe
+                    val nextRoute = if (event.matricule != null) {
+                        Screen.PasswordUpdate.createRoute(
+                            event.adherentId ?: "",
+                            event.matricule,
+                            event.defaultPassword ?: ""
+                        )
+                    } else null
+                    
+                    navController.navigate(
+                        Screen.Payment.createRoute(
+                            adherentId = event.adherentId,
+                            localAdherentId = event.localAdherentId,
+                            montantTotal = event.montantTotal,
+                            nextRoute = nextRoute
+                        )
                     ) {
                         popUpTo(Screen.Enrollment.route) { inclusive = true }
                     }
@@ -113,7 +138,9 @@ fun AppNavigation(
         ) { backStackEntry ->
             val adherentId = backStackEntry.arguments?.getString("adherentId") ?: ""
             val matricule = backStackEntry.arguments?.getString("matricule") ?: ""
-            val defaultPassword = backStackEntry.arguments?.getString("defaultPassword") ?: ""
+            // Décoder car le message peut contenir des espaces/caractères spéciaux
+            val defaultPasswordRaw = backStackEntry.arguments?.getString("defaultPassword") ?: ""
+            val defaultPassword = android.net.Uri.decode(defaultPasswordRaw)
 
             PasswordUpdateScreen(
                 adherentId = adherentId,
@@ -249,6 +276,12 @@ fun AppNavigation(
             NotificationsScreen()
         }
 
+        composable(Screen.Renewal.route) {
+            RenewalScreen(
+                onFinish = { navController.popBackStack() }
+            )
+        }
+
         composable(Screen.QRScanner.route) {
             QrScannerScreen(
                 onDismiss = { navController.popBackStack() },
@@ -281,7 +314,8 @@ fun AppNavigation(
             arguments = listOf(
                 navArgument("adherentId") { type = NavType.StringType; nullable = true },
                 navArgument("localAdherentId") { type = NavType.StringType; nullable = true },
-                navArgument("montantTotal") { type = NavType.IntType; defaultValue = 0 }
+                navArgument("montantTotal") { type = NavType.IntType; defaultValue = 0 },
+                navArgument("nextRoute") { type = NavType.StringType; nullable = true; defaultValue = null }
             )
         ) { backStackEntry ->
             val adherentId = backStackEntry.arguments?.getString("adherentId")
@@ -290,10 +324,15 @@ fun AppNavigation(
                 ?.takeIf { it != "null" }
             val localAdherentId = localAdherentIdStr?.toLongOrNull()
             val montantTotal = backStackEntry.arguments?.getInt("montantTotal")?.toDouble()
+            // Décoder la route suivante
+            val nextRouteRaw = backStackEntry.arguments?.getString("nextRoute")
+            val nextRoute = if (nextRouteRaw != null) android.net.Uri.decode(nextRouteRaw) else null
+            
             Paiement(
                 adherentId = adherentId,
                 localAdherentId = localAdherentId,
                 montantTotal = montantTotal,
+                nextRoute = nextRoute,
                 navController = navController
             )
         }

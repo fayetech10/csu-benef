@@ -85,7 +85,11 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector)
 
     // ── Profil & Paramètres ──
     object Profile : Screen("profile", "Profil", Icons.Default.AccountCircle)
-    object PasswordUpdate : Screen("password_update", "Mot de passe", Icons.Default.Password)
+    object PasswordUpdate : Screen("password_update", "Mot de passe", Icons.Default.Password) {
+        fun createRoute(adherentId: String, matricule: String, defaultPassword: String) =
+            "password_update/${adherentId}/${matricule}/${android.net.Uri.encode(defaultPassword)}"
+    }
+
     object QRScanner : Screen("qr_scanner", "Scanner QR", Icons.Rounded.QrCode)
 
     object EditProfile : Screen(
@@ -106,14 +110,16 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector)
     )
 
     object Payment : Screen(
-        "paiement/{adherentId}/{localAdherentId}/{montantTotal}",
+        "paiement/{adherentId}/{localAdherentId}/{montantTotal}?nextRoute={nextRoute}",
         "Paiement",
         Icons.Default.Add
     ) {
         fun createRoute(
             adherentId: String? = null,
             localAdherentId: Long? = null,
-            montantTotal: Int = 0
-        ) = "paiement/${adherentId ?: "null"}/${localAdherentId ?: "null"}/$montantTotal"
+            montantTotal: Int = 0,
+            nextRoute: String? = null
+        ) = "paiement/${adherentId ?: "null"}/${localAdherentId ?: "null"}/$montantTotal" +
+                if (nextRoute != null) "?nextRoute=${android.net.Uri.encode(nextRoute)}" else ""
     }
 }

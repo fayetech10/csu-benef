@@ -33,10 +33,10 @@ data class CreateAdherentResponse(
  * Détails de l'adhérent créé (ID, matricule, mot de passe).
  */
 data class AdherentIdResponse(
-    @SerializedName("adherent_id")
+    @SerializedName("adherentId")
     val adherentId: String,
     val matricule: String? = null,
-    @SerializedName("default_password")
+    @SerializedName("passwordInfo")
     val defaultPassword: String? = null
 )
 
@@ -73,7 +73,7 @@ data class ErrorResponse(
 data class ApiResponseP(
     val success: Boolean = true,
     val message: String = "",
-    val data: String? = null
+    val data: Any? = null
 )
 
 /**

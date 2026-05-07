@@ -349,16 +349,20 @@ private fun PremiumHeader(
                     contentScale = ContentScale.Crop
                 )
                 
-                // Status Badge
+                // Status Badge (Dynamic)
+                val endDate = com.example.sencsu.utils.Formatters.getCoverageEndDate(adherent.coveragePeriod)
+                val isExpired = endDate != null && endDate.isBefore(java.time.LocalDate.now())
+                val statusColor = if (isExpired) AppColors.StatusRed else AppColors.StatusGreen
+                
                 Surface(
-                    color = AppColors.StatusGreen,
+                    color = statusColor,
                     shape = CircleShape,
                     modifier = Modifier
                         .size(32.dp)
                         .border(3.dp, Color.White, CircleShape)
                 ) {
                     Icon(
-                        Icons.Rounded.Verified,
+                        if (isExpired) Icons.Rounded.ErrorOutline else Icons.Rounded.Verified,
                         null,
                         tint = Color.White,
                         modifier = Modifier.padding(6.dp)

@@ -119,8 +119,32 @@ object Formatters {
             if (isLeapYear && day > 29) return false
             if (!isLeapYear && day > 28) return false
         }
-
         return true
+    }
+
+    /**
+     * Extrait la date de fin d'une période de couverture.
+     * Gère le nouveau format "dd/MM/yyyy - dd/MM/yyyy" 
+     * et l'ancien format "YYYY - YYYY".
+     */
+    @TargetApi(Build.VERSION_CODES.O)
+    fun getCoverageEndDate(period: String?): java.time.LocalDate? {
+        if (period.isNullOrBlank()) return null
+        return try {
+            val parts = period.split(" - ")
+            if (parts.size == 2) {
+                val endStr = parts[1].trim()
+                if (endStr.contains("/")) {
+                    // Nouveau format dd/MM/yyyy
+                    val formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
+                    java.time.LocalDate.parse(endStr, formatter)
+                } else {
+                    // Ancien format YYYY (on considère que c'est jusqu'à la fin de l'année)
+                    val year = endStr.toInt()
+                    java.time.LocalDate.of(year, 12, 31)
+                }
+            } else null
+        } catch (e: Exception) { null }
     }
 }
 

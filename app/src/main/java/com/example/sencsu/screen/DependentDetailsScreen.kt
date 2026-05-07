@@ -122,7 +122,7 @@ fun DependentDetailsScreen(
                         visible = showContent,
                         enter = fadeIn(tween(400, 100)) + slideInVertically(tween(400, 100), initialOffsetY = { 40 })
                     ) {
-                        DependentCoverageCard(pc)
+                        DependentCoverageCard(uiState.adherent?.coveragePeriod)
                     }
 
                     Spacer(Modifier.height(16.dp))
@@ -280,19 +280,23 @@ private fun DependentIdentitySection(pc: PersonneChargeDto, sessionManager: com.
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-private fun DependentCoverageCard(pc: PersonneChargeDto) {
-    // On simule une validité d'un an à partir de createdAt ou aujourd'hui
-    val createdAt = pc.createdAt ?: java.time.LocalDateTime.now().toString()
+private fun DependentCoverageCard(coveragePeriod: String?) {
+    val endDate = com.example.sencsu.utils.Formatters.getCoverageEndDate(coveragePeriod)
     
-    val progress = remember(createdAt) {
+    val progress = remember(endDate) {
+        if (endDate == null) return@remember 0.05f
         try {
-            val created = java.time.LocalDateTime.parse(createdAt)
-            val now = java.time.LocalDateTime.now()
-            val end = created.plusYears(1)
-            val totalDays = java.time.temporal.ChronoUnit.DAYS.between(created, end).toFloat()
-            val elapsedDays = java.time.temporal.ChronoUnit.DAYS.between(created, now).toFloat()
+            val start = endDate.minusYears(1)
+            val now = java.time.LocalDate.now()
+            val totalDays = java.time.temporal.ChronoUnit.DAYS.between(start, endDate).toFloat()
+            val elapsedDays = java.time.temporal.ChronoUnit.DAYS.between(start, now).toFloat()
             (elapsedDays / totalDays).coerceIn(0f, 1f)
         } catch (e: Exception) { 0.05f }
+    }
+
+    val remainingDays = remember(endDate) {
+        if (endDate == null) return@remember 0L
+        java.time.temporal.ChronoUnit.DAYS.between(java.time.LocalDate.now(), endDate).coerceAtLeast(0)
     }
 
     val animatedProgress by animateFloatAsState(
@@ -328,7 +332,12 @@ private fun DependentCoverageCard(pc: PersonneChargeDto) {
             
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text("Bénéficiaire actif", fontSize = 12.sp, color = AppColors.TextSub)
-                Text("1 an restant", fontWeight = FontWeight.Black, fontSize = 12.sp, color = AppColors.StatusGreen)
+                Text(
+                    if (remainingDays > 0) "$remainingDays jour(s) restants" else "Expiré",
+                    fontWeight = FontWeight.Black,
+                    fontSize = 12.sp,
+                    color = if (remainingDays > 0) AppColors.StatusGreen else AppColors.StatusRed
+                )
             }
         }
     }

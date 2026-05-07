@@ -71,4 +71,9 @@ class AdherentRepository @Inject constructor(
     override suspend fun scanAdherent(matricule: String): Result<AdherentDto> = safeApiCall {
         apiService.scanAdherent(matricule).data
     }
+
+    override suspend fun registerFcmToken(id: String, token: String): Result<Unit> = safeApiCall {
+        apiService.registerFcmToken(id, mapOf("token" to token))
+        Unit
+    }
 }

@@ -77,6 +77,12 @@ interface ApiService {
         @Path("matricule") matricule: String
     ): ApiResponse<AdherentDto>
 
+    @POST("/api/adherents/{id}/fcm-token")
+    suspend fun registerFcmToken(
+        @Path("id") id: String,
+        @Body tokenRequest: Map<String, String>
+    ): Response<ApiResponse<Unit>>
+
 
     // =========================================================================
     // PERSONNES À CHARGE (DÉPENDANTS)
@@ -107,7 +113,7 @@ interface ApiService {
     // =========================================================================
 
     @GET("/api/paiements/adherent/{id}")
-    suspend fun getPaiementsByAdherentId(@Path("id") adherentId: String): List<PaiementDto>
+    suspend fun getPaiementsByAdherentId(@Path("id") adherentId: String): ApiResponse<List<PaiementDto>>
 
     @GET("/api/cotisation/adherent/{id}")
     suspend fun getCotisationByAdherentId(

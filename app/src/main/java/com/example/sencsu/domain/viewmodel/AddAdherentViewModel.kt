@@ -35,7 +35,13 @@ private const val DEPENDANT_PRICE = 3500
 
 sealed class AddAdherentUiEvent {
     data class ShowSnackbar(val message: String) : AddAdherentUiEvent()
-    data class NavigateToPayment(val adherentId: String?, val localAdherentId: Long?, val montantTotal: Int) : AddAdherentUiEvent()
+    data class NavigateToPayment(
+        val adherentId: String?,
+        val localAdherentId: Long?,
+        val montantTotal: Int,
+        val matricule: String? = null,
+        val defaultPassword: String? = null
+    ) : AddAdherentUiEvent()
     data class NavigateToPasswordUpdate(val adherentId: String, val matricule: String, val defaultPassword: String) : AddAdherentUiEvent()
     object NavigateBack : AddAdherentUiEvent()
 }
@@ -392,7 +398,15 @@ class AddAdherentViewModel @Inject constructor(
                         .onSuccess { idResponse ->
                             adherentDao.markAsSynced(localId, idResponse.adherentId)
                             _uiEvent.send(AddAdherentUiEvent.ShowSnackbar("Adhérent ajouté !"))
-                            _uiEvent.send(AddAdherentUiEvent.NavigateToPasswordUpdate(idResponse.adherentId, idResponse.matricule ?: "Inconnu", idResponse.defaultPassword ?: "acmu00"))
+                            _uiEvent.send(
+                                AddAdherentUiEvent.NavigateToPayment(
+                                    adherentId = idResponse.adherentId,
+                                    localAdherentId = localId,
+                                    montantTotal = state.totalCost,
+                                    matricule = idResponse.matricule,
+                                    defaultPassword = idResponse.defaultPassword
+                                )
+                            )
                             resetForm()
                         }
                         .onFailure { throw it }

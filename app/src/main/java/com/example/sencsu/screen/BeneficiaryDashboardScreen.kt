@@ -112,6 +112,7 @@ import java.time.temporal.ChronoUnit
 fun BeneficiaryDashboardScreen(
     onNavigateToHistory: (String) -> Unit = {},
     onNavigateToCard: (String) -> Unit = {},
+    onNavigateToRenewal: () -> Unit = {},
     onProfileClick: () -> Unit = {},
     viewModel: BeneficiaryDashboardViewModel = hiltViewModel()
 ) {
@@ -120,34 +121,42 @@ fun BeneficiaryDashboardScreen(
     val adherent = uiState.adherent
     var showContent by remember { mutableStateOf(false) }
 
+    // Vérification de l'expiration
+    val isExpired = remember(adherent) {
+        val endDate = com.example.sencsu.utils.Formatters.getCoverageEndDate(adherent?.coveragePeriod)
+        endDate != null && endDate.isBefore(java.time.LocalDate.now())
+    }
+
     LaunchedEffect(Unit) {
         delay(80)
         showContent = true
     }
 
-    PullToRefreshBox(
-        isRefreshing = uiState.isLoading,
-        onRefresh = { viewModel.refresh() }
-    ) {
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(AppColors.AppBackground),
-            contentPadding = PaddingValues(bottom = 126.dp)
+    Box(modifier = Modifier.fillMaxSize()) {
+        PullToRefreshBox(
+            isRefreshing = uiState.isLoading,
+            onRefresh = { viewModel.refresh() },
+            modifier = Modifier.fillMaxSize()
         ) {
-            item {
-                HomeHero(
-                    adherent = adherent,
-                    sessionManager = viewModel.sessionManager,
-                    isLoading = uiState.isLoading,
-                    onProfileClick = onProfileClick,
-                    onRefresh = { viewModel.refresh() }
-                )
-            }
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(AppColors.AppBackground),
+                contentPadding = PaddingValues(bottom = 126.dp)
+            ) {
+                item {
+                    HomeHero(
+                        adherent = adherent,
+                        sessionManager = viewModel.sessionManager,
+                        isLoading = uiState.isLoading,
+                        onProfileClick = onProfileClick,
+                        onRefresh = { viewModel.refresh() }
+                    )
+                }
 
-            if (adherent == null && uiState.isLoading) {
-                item { HomeLoadingState() }
-            } else if (adherent == null) {
+                if (adherent == null && uiState.isLoading) {
+                    item { HomeLoadingState() }
+                } else if (adherent == null) {
                 item {
                     HomeErrorCard(
                         message = uiState.error ?: "Impossible de charger votre espace beneficiaire.",
@@ -224,6 +233,12 @@ fun BeneficiaryDashboardScreen(
                     }
                 }
             }
+            }
+        }
+
+        // Overlay d'expiration bloquant
+        if (isExpired && adherent != null) {
+            ExpirationOverlay(onRenew = onNavigateToRenewal)
         }
     }
 }
@@ -380,8 +395,8 @@ private fun CoverageCard(
     onOpenCard: () -> Unit
 ) {
     val isActive = adherent.actif != false
-    val progress = coverageProgress(adherent.createdAt)
-    val remainingDays = remainingCoverageDays(adherent.createdAt)
+    val progress = coverageProgress(adherent)
+    val remainingDays = remainingCoverageDays(adherent)
     val progressColor = when {
         !isActive -> AppColors.StatusRed
         progress >= 0.85f -> AppColors.StatusOrange
@@ -773,12 +788,16 @@ private fun HomeErrorCard(message: String, onRetry: () -> Unit) {
 }
 
 @RequiresApi(Build.VERSION_CODES.O)
-private fun coverageProgress(createdAt: String?): Float {
+private fun coverageProgress(adherent: AdherentDto?): Float {
+    if (adherent == null) return 0f
+    val endDate = com.example.sencsu.utils.Formatters.getCoverageEndDate(adherent.coveragePeriod) ?: return 0f
     return try {
-        val created = LocalDateTime.parse(createdAt)
-        val end = created.plusYears(1)
-        val totalDays = ChronoUnit.DAYS.between(created, end).toFloat()
-        val elapsedDays = ChronoUnit.DAYS.between(created, LocalDateTime.now()).toFloat()
+        // On estime la date de début à 1 an avant la fin pour le calcul de progression
+        val startDate = endDate.minusYears(1)
+        val now = java.time.LocalDate.now()
+        
+        val totalDays = java.time.temporal.ChronoUnit.DAYS.between(startDate, endDate).toFloat()
+        val elapsedDays = java.time.temporal.ChronoUnit.DAYS.between(startDate, now).toFloat()
         (elapsedDays / totalDays).coerceIn(0f, 1f)
     } catch (e: Exception) {
         0f
@@ -786,10 +805,11 @@ private fun coverageProgress(createdAt: String?): Float {
 }
 
 @RequiresApi(Build.VERSION_CODES.O)
-private fun remainingCoverageDays(createdAt: String?): Long {
+private fun remainingCoverageDays(adherent: AdherentDto?): Long {
+    if (adherent == null) return 0L
+    val endDate = com.example.sencsu.utils.Formatters.getCoverageEndDate(adherent.coveragePeriod) ?: return 0L
     return try {
-        val end = LocalDateTime.parse(createdAt).plusYears(1)
-        ChronoUnit.DAYS.between(LocalDateTime.now(), end).coerceAtLeast(0)
+        java.time.temporal.ChronoUnit.DAYS.between(java.time.LocalDate.now(), endDate).coerceAtLeast(0)
     } catch (e: Exception) {
         0L
     }
@@ -805,3 +825,72 @@ private fun formatDate(value: String?): String {
 }
 
 private fun String?.orDash(): String = this?.takeIf { it.isNotBlank() } ?: "-"
+
+@Composable
+private fun ExpirationOverlay(onRenew: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.88f))
+            .clickable(enabled = false) {}, // Bloque les interactions avec le fond
+        contentAlignment = Alignment.Center
+    ) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(32.dp),
+            shape = AppShapes.LargeRadius,
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            elevation = CardDefaults.cardElevation(defaultElevation = 24.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(20.dp)
+            ) {
+                Surface(
+                    shape = CircleShape,
+                    color = AppColors.StatusRedSoft,
+                    modifier = Modifier.size(72.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            Icons.Rounded.ErrorOutline,
+                            null,
+                            tint = AppColors.StatusRed,
+                            modifier = Modifier.size(40.dp)
+                        )
+                    }
+                }
+
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        "Couverture Expiree",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Black,
+                        color = AppColors.TextMain
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "Votre contrat d'assurance SenCSU est arrive a son terme. Pour continuer a beneficier de vos droits, vous devez renouveler votre adhesion.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = AppColors.TextSub,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        lineHeight = 22.sp
+                    )
+                }
+
+                Button(
+                    onClick = onRenew,
+                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                    shape = AppShapes.MediumRadius,
+                    colors = ButtonDefaults.buttonColors(containerColor = AppColors.BrandBlue)
+                ) {
+                    Icon(Icons.Rounded.Refresh, null)
+                    Spacer(Modifier.width(12.dp))
+                    Text("Renouveler maintenant", fontWeight = FontWeight.Black)
+                }
+            }
+        }
+    }
+}

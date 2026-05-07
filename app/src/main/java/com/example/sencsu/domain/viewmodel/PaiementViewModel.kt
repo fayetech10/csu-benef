@@ -26,7 +26,7 @@ import javax.inject.Inject
 
 private const val TAG = "PaiementViewModel"
 private const val MAX_CODE_LENGTH = 35
-private const val MIN_CODE_LENGTH = 15
+private const val MIN_CODE_LENGTH = 8
 
 @HiltViewModel
 class PaiementViewModel @Inject constructor(
@@ -62,7 +62,7 @@ class PaiementViewModel @Inject constructor(
 
         return if (mode == "Wave" || mode == "Orange Money") {
             val cleaned = reference.trim().replace(" ", "")
-            cleaned.length >= 8 && cleaned.any { it.isDigit() }
+            cleaned.length >= 6 && cleaned.any { it.isDigit() }
         } else {
             true
         }
@@ -84,9 +84,13 @@ class PaiementViewModel @Inject constructor(
                 adherentRepository.getAdherentById(adherentId)
                     .onSuccess { adherent ->
                         uiState = uiState.copy(
-                            adherentId = adherent.id,
-                            montantTotal = adherent.montantTotal
+                            adherentId = adherent.id ?: uiState.adherentId,
+                            montantTotal = adherent.montantTotal ?: uiState.montantTotal
                         )
+                        Log.d(TAG, "Adhérent chargé: ID=${uiState.adherentId}, Montant=${uiState.montantTotal}")
+                    }
+                    .onFailure { e ->
+                        Log.e(TAG, "Erreur lors du chargement de l'adhérent: ${e.message}")
                     }
             } else if (localAdherentId != null) {
                 val localAdherent = adherentDao.getAdherentById(localAdherentId)
@@ -136,35 +140,38 @@ class PaiementViewModel @Inject constructor(
                 // 3. Tentative d'envoi API
                 try {
                     // Upload de l'image
+                    Log.d(TAG, "Début de l'upload de l'image de paiement...")
                     val uploadResult = fileRepository.uploadImage(context, uiState.photoPaiement!!)
                     val photoUrl = uploadResult.getOrThrow()
+                    Log.d(TAG, "Image uploadée avec succès: $photoUrl")
 
                     if (uiState.adherentId != null) {
+                        val montant = uiState.montantTotal ?: 0.0
                         val paiementDto = PaiementDto(
                             adherentId = uiState.adherentId!!,
                             reference = uiState.reference,
-                            montant = uiState.montantTotal!!,
+                            montant = montant,
                             modePaiement = uiState.modePaiement,
                             photoPaiement = photoUrl,
                             photos = listOf(photoUrl)
                         )
 
+                        Log.d(TAG, "Envoi du paiement au serveur: $paiementDto")
                         // Appel du repository
                         paiementRepository.addPaiement(paiementDto)
                             .onSuccess {
-                                Log.d(TAG, "Paiement ajouté avec succès")
+                                Log.d(TAG, "Paiement validé par le serveur")
                                 // Synchronisation réussie
                                 paiementDao.markAsSynced(localId, localId)
                                 uiState = uiState.copy(isLoading = false, isSuccess = true)
                             }
                             .onFailure { exception ->
-                                Log.e(TAG, "Erreur lors de l'ajout: ${exception.message}", exception)
+                                Log.e(TAG, "Le serveur a refusé le paiement: ${exception.message}")
 
                                 // SI ERREUR DE VALIDATION (ex: Référence déjà utilisée)
                                 if (exception is ValidationException) {
-                                    // On supprime de Room car la donnée est invalide
-                                    // et ne pourra JAMAIS être synchronisée
-                                    paiementDao.clearAll()
+                                    // On supprime uniquement CET enregistrement de Room car il est invalide
+                                    paiementDao.deleteById(localId)
 
                                     uiState = uiState.copy(
                                         isLoading = false,
@@ -250,6 +257,7 @@ class PaiementViewModel @Inject constructor(
 
         val strategies = listOf(
             ::findByTransactionIdPattern,
+            ::findByRefLabel,
             ::findByTransactionIdWithSeparator,
             ::findByTransactionLabel,
             ::findByCodePattern
@@ -281,6 +289,14 @@ class PaiementViewModel @Inject constructor(
             RegexOption.IGNORE_CASE
         )
         return extractAndValidateCode(regex.find(text), "Stratégie 1: ID de transaction")
+    }
+
+    private fun findByRefLabel(text: String): String {
+        val regex = Regex(
+            """(?i)\bréf[erence]*\s*[:\-]?\s*([A-Za-z0-9]+)""",
+            RegexOption.IGNORE_CASE
+        )
+        return extractAndValidateCode(regex.find(text), "Stratégie: Réf/Référence")
     }
 
     private fun findByTransactionIdWithSeparator(text: String): String {
