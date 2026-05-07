@@ -61,6 +61,10 @@ data class AdherentDto(
     // ── Finances ──
     val montantTotal: Double? = 0.0,
 
+    // ── Scanner Metadata ──
+    val type: String? = null,
+    val adherentId: String? = null,
+
     // ── Relations ──
     val personnesCharge: List<PersonneChargeDto> = emptyList()
 )

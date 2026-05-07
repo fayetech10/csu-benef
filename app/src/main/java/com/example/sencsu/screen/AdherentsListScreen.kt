@@ -1,35 +1,74 @@
 package com.example.sencsu.screen
 
-import androidx.compose.animation.*
-import androidx.compose.animation.core.*
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowForward
-import androidx.compose.material.icons.rounded.*
-import androidx.compose.material3.*
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.ErrorOutline
+import androidx.compose.material.icons.rounded.Group
+import androidx.compose.material.icons.rounded.Pause
+import androidx.compose.material.icons.rounded.PersonAdd
+import androidx.compose.material.icons.rounded.Phone
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Verified
+import androidx.compose.material.icons.rounded.WorkHistory
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import com.example.sencsu.components.design.EmptyStateBlock
+import com.example.sencsu.components.design.InfoBanner
+import com.example.sencsu.components.design.MetricCard
+import com.example.sencsu.components.design.RowArrow
+import com.example.sencsu.components.design.SectionHeader
+import com.example.sencsu.components.design.SenCsuHeader
+import com.example.sencsu.components.design.StatusPill
 import com.example.sencsu.data.remote.dto.AdherentDto
 import com.example.sencsu.domain.viewmodel.DashboardViewModel
 import com.example.sencsu.navigation.Screen
-import com.example.sencsu.theme.*
+import com.example.sencsu.theme.AppColors
+import com.example.sencsu.theme.AppShapes
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,11 +83,23 @@ fun AdherentsListScreen(
     var visible by remember { mutableStateOf(false) }
 
     val filtered = remember(adherents, query) {
-        if (query.isBlank()) adherents
-        else adherents.filter {
-            listOfNotNull(it.matricule, it.nom, it.prenoms, it.whatsapp)
-                .any { v -> v.contains(query, ignoreCase = true) }
+        val search = query.trim()
+        if (search.isBlank()) {
+            adherents
+        } else {
+            adherents.filter {
+                listOfNotNull(it.matricule, it.nom, it.prenoms, it.whatsapp, it.regime)
+                    .any { value -> value.contains(search, ignoreCase = true) }
+            }
         }
+    }
+
+    val activeCount = adherents.count { it.actif == true }
+    val inactiveCount = adherents.size - activeCount
+    val userName = remember(authState.user) {
+        authState.user?.let { "${it.prenom.orEmpty()} ${it.name.orEmpty()}".trim() }
+            ?.ifEmpty { null }
+            ?: "Agent terrain"
     }
 
     LaunchedEffect(Unit) { visible = true }
@@ -69,235 +120,93 @@ fun AdherentsListScreen(
         PullToRefreshBox(
             isRefreshing = state.isLoading,
             onRefresh = { viewModel.refresh() },
-            modifier = Modifier.fillMaxSize().padding(scaffoldPadding)
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(scaffoldPadding)
         ) {
             LazyColumn(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(AppColors.AppBackground),
                 contentPadding = PaddingValues(bottom = 120.dp)
             ) {
-
-                // ── Hero ──
                 item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(220.dp)
-                            .background(
-                                Brush.verticalGradient(
-                                    listOf(AppColors.BrandBlueDark, AppColors.BrandBlue, Color(0xFF0A9070))
-                                )
-                            )
-                            .statusBarsPadding()
-                    ) {
-                        // Decorative rings
-                        Box(Modifier.size(220.dp).align(Alignment.TopEnd).offset(x = 70.dp, y = (-70).dp)
-                            .clip(CircleShape).background(Color.White.copy(alpha = 0.04f)))
-                        Box(Modifier.size(110.dp).align(Alignment.BottomStart).offset(x = (-30).dp, y = 30.dp)
-                            .clip(CircleShape).background(Color.White.copy(alpha = 0.06f)))
-
-                        Column(
-                            modifier = Modifier.align(Alignment.BottomStart).padding(20.dp),
-                            verticalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            // Role chip
-                            Surface(
-                                shape = AppShapes.CircleRadius,
-                                color = Color.White.copy(alpha = 0.15f)
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(5.dp)
-                                ) {
-                                    Box(Modifier.size(6.dp).clip(CircleShape).background(AppColors.GoldAccent))
-                                    Text(
-                                        "AGENT CSU",
-                                        color = Color.White,
-                                        style = MaterialTheme.typography.labelSmall,
-                                        fontWeight = FontWeight.ExtraBold,
-                                        letterSpacing = 1.5.sp
-                                    )
-                                }
-                            }
-                            Text(
-                                "Mes adhérents",
-                                style = MaterialTheme.typography.headlineMedium,
-                                fontWeight = FontWeight.Black,
-                                color = Color.White
-                            )
-                            authState.user?.let {
-                                Text(
-                                    "${it.prenom ?: ""} ${it.name ?: ""}".trim().ifEmpty { "Agent" },
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = Color.White.copy(alpha = 0.68f)
-                                )
-                            }
-                        }
-
-                        // Count badge top-right
-                        AnimatedVisibility(
-                            visible = visible && adherents.isNotEmpty(),
-                            modifier = Modifier.align(Alignment.TopEnd).padding(16.dp).statusBarsPadding(),
-                            enter = fadeIn() + scaleIn()
-                        ) {
-                            Surface(
-                                shape = AppShapes.LargeRadius,
-                                color = Color.White.copy(alpha = 0.18f),
-                                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.25f))
-                            ) {
-                                Column(
-                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
-                                    horizontalAlignment = Alignment.CenterHorizontally
-                                ) {
-                                    Text(
-                                        "${adherents.size}",
-                                        style = MaterialTheme.typography.headlineSmall,
-                                        fontWeight = FontWeight.Black,
-                                        color = Color.White
-                                    )
-                                    Text(
-                                        "total",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = Color.White.copy(alpha = 0.7f)
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // ── Stats Row ──
-                item {
-                    AnimatedVisibility(
-                        visible = visible,
-                        enter = fadeIn(tween(400)) + slideInVertically(tween(400)) { -30 }
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .offset(y = (-20).dp)
-                                .padding(horizontal = 16.dp),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            val active = adherents.count { it.actif == true }
-                            MiniStatCard("Actifs", active.toString(), Icons.Rounded.CheckCircle, AppColors.StatusGreen, Modifier.weight(1f))
-                            MiniStatCard("Inactifs", (adherents.size - active).toString(), Icons.Rounded.Pause, AppColors.StatusOrange, Modifier.weight(1f))
-                            MiniStatCard("Ce mois", adherents.takeLast(5).size.toString(), Icons.Rounded.TrendingUp, AppColors.ActionBlue, Modifier.weight(1f))
-                        }
-                    }
-                }
-
-                // ── Search ──
-                item {
-                    OutlinedTextField(
-                        value = query,
-                        onValueChange = { query = it },
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 8.dp),
-                        placeholder = { Text("Rechercher un adhérent...") },
-                        leadingIcon = { Icon(Icons.Rounded.Search, null, tint = AppColors.TextSub) },
-                        trailingIcon = {
-                            if (query.isNotEmpty()) {
-                                IconButton(onClick = { query = "" }) {
-                                    Icon(Icons.Rounded.Close, null, tint = AppColors.TextSub)
-                                }
-                            }
-                        },
-                        shape = AppShapes.LargeRadius,
-                        singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = AppColors.SurfaceBackground,
-                            unfocusedContainerColor = AppColors.SurfaceBackground,
-                            unfocusedBorderColor = AppColors.BorderColorLight,
-                            focusedBorderColor = AppColors.BrandBlue
-                        )
+                    SenCsuHeader(
+                        title = "Mes adhérents",
+                        subtitle = "$userName - ${adherents.size} dossier(s) en portefeuille"
                     )
                 }
 
-                // ── Section title ──
-                if (filtered.isNotEmpty()) {
-                    item {
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                if (query.isEmpty()) "Liste complète" else "${filtered.size} résultat(s)",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Black,
-                                color = AppColors.TextMain,
-                                modifier = Modifier.weight(1f)
-                            )
-                            Text(
-                                "Tap pour les détails",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = AppColors.TextDisabled
-                            )
-                        }
+                item {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        MetricCard("Actifs", activeCount.toString(), Icons.Rounded.Verified, AppColors.StatusGreen, Modifier.weight(1f))
+                        MetricCard("Inactifs", inactiveCount.toString(), Icons.Rounded.Pause, AppColors.StatusOrange, Modifier.weight(1f))
+                        MetricCard("Dossiers", adherents.size.toString(), Icons.Rounded.WorkHistory, AppColors.ActionBlue, Modifier.weight(1f))
                     }
                 }
 
-                // ── Empty ──
-                if (!state.isLoading && filtered.isEmpty()) {
-                    item {
-                        Column(
-                            modifier = Modifier.fillMaxWidth().padding(top = 48.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            Surface(
-                                shape = CircleShape,
-                                color = AppColors.BrandBlueLite,
-                                modifier = Modifier.size(72.dp)
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Icon(Icons.Rounded.Group, null, tint = AppColors.BrandBlue, modifier = Modifier.size(32.dp))
-                                }
-                            }
-                            Text(
-                                if (query.isEmpty()) "Aucun adhérent" else "Aucun résultat",
-                                fontWeight = FontWeight.Bold,
-                                color = AppColors.TextMain,
-                                style = MaterialTheme.typography.titleMedium
-                            )
-                            Text(
-                                if (query.isEmpty()) "Appuyez sur le bouton + pour ajouter" else "Essayez un autre terme",
-                                color = AppColors.TextSub,
-                                style = MaterialTheme.typography.bodySmall
-                            )
-                        }
-                    }
+                item {
+                    SearchBox(
+                        query = query,
+                        onQueryChange = { query = it }
+                    )
                 }
 
-                // ── Error ──
                 if (state.error != null && adherents.isEmpty()) {
                     item {
-                        Card(
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                            shape = AppShapes.LargeRadius,
-                            colors = CardDefaults.cardColors(containerColor = AppColors.StatusRedSoft),
-                            border = BorderStroke(1.dp, AppColors.StatusRed.copy(alpha = 0.2f))
-                        ) {
-                            Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Rounded.ErrorOutline, null, tint = AppColors.StatusRed)
-                                Spacer(Modifier.width(10.dp))
-                                Text(state.error ?: "", color = AppColors.StatusRed, modifier = Modifier.weight(1f))
-                                TextButton(onClick = { viewModel.refresh() }) { Text("Réessayer") }
-                            }
-                        }
+                        InfoBanner(
+                            title = "Chargement impossible",
+                            message = state.error ?: "Erreur de connexion",
+                            icon = Icons.Rounded.ErrorOutline,
+                            color = AppColors.StatusRed,
+                            actionLabel = "Réessayer",
+                            onAction = { viewModel.refresh() }
+                        )
                     }
                 }
 
-                // ── Cards ──
-                itemsIndexed(filtered, key = { _, a -> a.id ?: a.hashCode() }) { i, adherent ->
+                if (filtered.isNotEmpty()) {
+                    item {
+                        SectionHeader(
+                            title = if (query.isBlank()) "Liste complète" else "${filtered.size} résultat(s)",
+                            subtitle = "Touchez un dossier pour consulter les détails"
+                        )
+                    }
+                }
+
+                if (!state.isLoading && filtered.isEmpty()) {
+                    item {
+                        EmptyStateBlock(
+                            title = if (query.isBlank()) "Aucun adhérent" else "Aucun résultat",
+                            subtitle = if (query.isBlank()) {
+                                "Ajoutez un premier dossier depuis le bouton d'action."
+                            } else {
+                                "Essayez un nom, un matricule ou un numéro différent."
+                            },
+                            icon = Icons.Rounded.Group
+                        )
+                    }
+                }
+
+                itemsIndexed(filtered, key = { _, item -> item.id ?: item.hashCode() }) { index, adherent ->
                     AnimatedVisibility(
                         visible = visible,
-                        enter = fadeIn(tween(280, delayMillis = (i * 50).coerceAtMost(500))) +
-                                slideInVertically(tween(280, delayMillis = (i * 50).coerceAtMost(500))) { 50 }
+                        enter = fadeIn(tween(260, delayMillis = (index * 35).coerceAtMost(350))) +
+                            slideInVertically(tween(260, delayMillis = (index * 35).coerceAtMost(350))) { 28 }
                     ) {
-                        PremiumAdherentCard(
+                        AdherentListCard(
                             adherent = adherent,
-                            index = i,
-                            onClick = { adherent.id?.let { rootNavController.navigate(Screen.AdherentDetails.createRoute(it)) } }
+                            index = index,
+                            onClick = {
+                                adherent.id?.let {
+                                    rootNavController.navigate(Screen.AdherentDetails.createRoute(it))
+                                }
+                            }
                         )
                     }
                 }
@@ -307,131 +216,129 @@ fun AdherentsListScreen(
 }
 
 @Composable
-private fun MiniStatCard(label: String, value: String, icon: ImageVector, color: Color, modifier: Modifier) {
-    Surface(
-        modifier = modifier,
-        shape = AppShapes.LargeRadius,
-        color = AppColors.SurfaceBackground,
-        border = BorderStroke(1.dp, AppColors.BorderColorLight),
-        shadowElevation = 4.dp
-    ) {
-        Row(
-            modifier = Modifier.padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Surface(shape = AppShapes.SmallRadius, color = color.copy(alpha = 0.12f)) {
-                Icon(icon, null, tint = color, modifier = Modifier.padding(5.dp).size(15.dp))
+private fun SearchBox(query: String, onQueryChange: (String) -> Unit) {
+    OutlinedTextField(
+        value = query,
+        onValueChange = onQueryChange,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+        placeholder = { Text("Rechercher un adhérent...") },
+        leadingIcon = { Icon(Icons.Rounded.Search, null, tint = AppColors.TextSub) },
+        trailingIcon = {
+            if (query.isNotEmpty()) {
+                IconButton(onClick = { onQueryChange("") }) {
+                    Icon(Icons.Rounded.Close, null, tint = AppColors.TextSub)
+                }
             }
-            Column {
-                Text(value, fontWeight = FontWeight.Black, fontSize = 16.sp, color = AppColors.TextMain)
-                Text(label, style = MaterialTheme.typography.labelSmall, color = AppColors.TextSub)
-            }
-        }
-    }
+        },
+        shape = AppShapes.MediumRadius,
+        singleLine = true,
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedContainerColor = AppColors.SurfaceBackground,
+            unfocusedContainerColor = AppColors.SurfaceBackground,
+            unfocusedBorderColor = AppColors.BorderColorLight,
+            focusedBorderColor = AppColors.BrandBlue
+        )
+    )
 }
 
-// Palette de couleurs d'avatar basée sur l'index
 private val avatarPalettes = listOf(
-    Pair(Color(0xFF08745F), Color(0xFFE7F5F1)), // Vert brand
-    Pair(Color(0xFF2563EB), Color(0xFFEFF6FF)), // Bleu
-    Pair(Color(0xFFD97706), Color(0xFFFFF4DE)), // Orange
-    Pair(Color(0xFF7C3AED), Color(0xFFF5F3FF)), // Violet
-    Pair(Color(0xFFDB2777), Color(0xFFFDF2F8)), // Rose
+    Pair(Color(0xFF08745F), Color(0xFFE7F5F1)),
+    Pair(Color(0xFF2563EB), Color(0xFFEFF6FF)),
+    Pair(Color(0xFFD97706), Color(0xFFFFF4DE)),
+    Pair(Color(0xFF7C3AED), Color(0xFFF5F3FF)),
+    Pair(Color(0xFFDB2777), Color(0xFFFDF2F8)),
 )
 
 @Composable
-private fun PremiumAdherentCard(adherent: AdherentDto, index: Int, onClick: () -> Unit) {
-    val name = "${adherent.prenoms ?: ""} ${adherent.nom ?: ""}".trim()
-    val initials = name.split(" ").filter { it.isNotBlank() }.take(2)
-        .mapNotNull { it.firstOrNull()?.uppercase() }.joinToString("").ifEmpty { "?" }
+private fun AdherentListCard(adherent: AdherentDto, index: Int, onClick: () -> Unit) {
+    val name = "${adherent.prenoms.orEmpty()} ${adherent.nom.orEmpty()}".trim().ifEmpty { "Sans nom" }
+    val initials = name.split(" ")
+        .filter { it.isNotBlank() }
+        .take(2)
+        .mapNotNull { it.firstOrNull()?.uppercase() }
+        .joinToString("")
+        .ifEmpty { "?" }
     val isActive = adherent.actif == true
     val (avatarColor, avatarBg) = avatarPalettes[index % avatarPalettes.size]
 
     Card(
         onClick = onClick,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 5.dp),
-        shape = AppShapes.LargeRadius,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 5.dp),
+        shape = AppShapes.MediumRadius,
         colors = CardDefaults.cardColors(containerColor = AppColors.SurfaceBackground),
         border = BorderStroke(1.dp, AppColors.BorderColorLight),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Row(
-            modifier = Modifier.padding(14.dp),
+            modifier = Modifier.padding(12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Avatar coloré
-            Surface(modifier = Modifier.size(50.dp), shape = CircleShape, color = avatarBg) {
+            Surface(modifier = Modifier.size(48.dp), shape = CircleShape, color = avatarBg) {
                 Box(contentAlignment = Alignment.Center) {
-                    Text(initials, color = avatarColor, fontWeight = FontWeight.Black, fontSize = 16.sp)
+                    Text(initials, color = avatarColor, fontWeight = FontWeight.Black)
                 }
             }
 
-            // Infos principales
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                 Text(
-                    name.ifEmpty { "Sans nom" },
+                    text = name,
+                    style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 14.sp,
                     color = AppColors.TextMain,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                // Chips info
+
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     if (!adherent.matricule.isNullOrBlank()) {
-                        InfoChip(adherent.matricule, AppColors.BrandBlue, AppColors.BrandBlueLite)
+                        SmallChip(adherent.matricule, AppColors.BrandBlue, AppColors.BrandBlueLite)
                     }
                     if (!adherent.regime.isNullOrBlank()) {
-                        InfoChip(adherent.regime, AppColors.TextSub, AppColors.SurfaceAlt)
+                        SmallChip(adherent.regime, AppColors.TextSub, AppColors.SurfaceAlt)
                     }
                 }
+
                 if (!adherent.whatsapp.isNullOrBlank()) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                        Icon(Icons.Rounded.Phone, null, tint = AppColors.TextDisabled, modifier = Modifier.size(11.dp))
-                        Text(adherent.whatsapp, style = MaterialTheme.typography.labelSmall, color = AppColors.TextDisabled, maxLines = 1)
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Icon(Icons.Rounded.Phone, null, tint = AppColors.TextDisabled, modifier = Modifier.size(12.dp))
+                        Text(
+                            text = adherent.whatsapp,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = AppColors.TextDisabled,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
                 }
             }
 
-            // Status + Arrow
             Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Surface(
-                    shape = AppShapes.CircleRadius,
-                    color = if (isActive) AppColors.StatusGreenSoft else AppColors.StatusRedSoft
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Box(Modifier.size(5.dp).clip(CircleShape)
-                            .background(if (isActive) AppColors.StatusGreen else AppColors.StatusRed))
-                        Text(
-                            if (isActive) "Actif" else "Inactif",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = if (isActive) AppColors.StatusGreen else AppColors.StatusRed
-                        )
-                    }
-                }
-                Icon(Icons.AutoMirrored.Rounded.ArrowForward, null, tint = AppColors.TextDisabled, modifier = Modifier.size(15.dp))
+                StatusPill(
+                    text = if (isActive) "Actif" else "Inactif",
+                    color = if (isActive) AppColors.StatusGreen else AppColors.StatusRed
+                )
+                RowArrow()
             }
         }
     }
 }
 
 @Composable
-private fun InfoChip(text: String, textColor: Color, bgColor: Color) {
-    Surface(shape = AppShapes.SmallRadius, color = bgColor) {
+private fun SmallChip(text: String, textColor: Color, bgColor: Color) {
+    Surface(shape = AppShapes.ExtraSmallRadius, color = bgColor) {
         Text(
-            text,
+            text = text,
             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.SemiBold,
             color = textColor,
-            maxLines = 1
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
         )
     }
 }

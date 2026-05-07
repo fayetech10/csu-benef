@@ -142,9 +142,15 @@ fun QrScannerScreen(
                 onViewDetails = {
                     val adherent = uiState.scannedAdherent!!
                     val id = adherent.id
+                    val type = adherent.type
+                    val parentId = adherent.adherentId
                     if (id != null) {
                         viewModel.reset()
-                        onNavigateToDetails(id)
+                        if (type == "PERSONNE_CHARGE" && parentId != null) {
+                            onNavigateToDetails(parentId)
+                        } else {
+                            onNavigateToDetails(id)
+                        }
                     }
                 },
                 onClose = {

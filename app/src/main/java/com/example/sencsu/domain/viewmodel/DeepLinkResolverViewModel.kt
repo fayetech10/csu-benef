@@ -42,8 +42,14 @@ class DeepLinkResolverViewModel @Inject constructor(
             val result = adherentRepository.scanAdherent(matricule)
             result.onSuccess { adherent ->
                 val id = adherent.id
+                val type = adherent.type
+                val parentId = adherent.adherentId
                 if (id != null) {
-                    val route = "adherent_details/$id"
+                    val route = if (type == "PERSONNE_CHARGE" && parentId != null) {
+                        "adherent_details/$parentId"
+                    } else {
+                        "adherent_details/$id"
+                    }
                     _uiState.update { it.copy(
                         isLoading = false,
                         resolvedData = adherent,

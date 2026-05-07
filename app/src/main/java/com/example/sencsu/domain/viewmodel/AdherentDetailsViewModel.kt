@@ -63,7 +63,7 @@ class AdherentDetailsViewModel @Inject constructor(
     private val _uiEvent = MutableSharedFlow<DetailsUiEvent>()
     val uiEvent = _uiEvent.asSharedFlow()
 
-    private val adherentId: String? = savedStateHandle["id"]
+    private val adherentId: String? = savedStateHandle["adherentId"] ?: savedStateHandle["id"]
 
     init {
         refresh()

@@ -1,37 +1,77 @@
 package com.example.sencsu.screen
 
-import androidx.compose.animation.*
-import androidx.compose.animation.core.*
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.*
-import androidx.compose.material3.*
+import androidx.compose.material.icons.rounded.CloudUpload
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.ErrorOutline
+import androidx.compose.material.icons.rounded.Group
+import androidx.compose.material.icons.rounded.Notifications
+import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.PersonAdd
+import androidx.compose.material.icons.rounded.QrCode
+import androidx.compose.material.icons.rounded.QrCodeScanner
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Sync
+import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import com.example.sencsu.components.design.ActionTile
+import com.example.sencsu.components.design.EmptyStateBlock
+import com.example.sencsu.components.design.HeaderAvatar
+import com.example.sencsu.components.design.HeaderIconButton
+import com.example.sencsu.components.design.InfoBanner
+import com.example.sencsu.components.design.MetricCard
+import com.example.sencsu.components.design.RowArrow
+import com.example.sencsu.components.design.SectionHeader
+import com.example.sencsu.components.design.SenCsuHeader
+import com.example.sencsu.components.design.StatusPill
 import com.example.sencsu.data.remote.dto.AdherentDto
 import com.example.sencsu.domain.viewmodel.DashboardViewModel
-import com.example.sencsu.theme.*
 import com.example.sencsu.navigation.Screen
+import com.example.sencsu.theme.AppColors
+import com.example.sencsu.theme.AppShapes
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -47,20 +87,20 @@ fun DashboardScreen(
 
     val user = authState.user
     val adherents = dashboardState.data?.data ?: emptyList()
-    val isLoading = dashboardState.isLoading
     val activeCount = adherents.count { it.actif == true }
+    val inactiveCount = adherents.size - activeCount
+    val isLoading = dashboardState.isLoading
 
-    var showContent by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) { showContent = true }
+    var showRows by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { showRows = true }
 
     val initials = remember(user) {
-        val p = user?.prenom?.firstOrNull()?.uppercase() ?: ""
-        val n = user?.name?.firstOrNull()?.uppercase() ?: ""
-        "$p$n".ifEmpty { "?" }
+        val first = user?.prenom?.firstOrNull()?.uppercase() ?: ""
+        val last = user?.name?.firstOrNull()?.uppercase() ?: ""
+        "$first$last".ifEmpty { "CS" }
     }
-
     val fullName = remember(user) {
-        "${user?.prenom ?: ""} ${user?.name ?: ""}".trim().ifEmpty { "Agent CSU" }
+        "${user?.prenom.orEmpty()} ${user?.name.orEmpty()}".trim().ifEmpty { "Agent CSU" }
     }
 
     Scaffold(
@@ -70,8 +110,8 @@ fun DashboardScreen(
                 containerColor = AppColors.BrandBlue,
                 contentColor = Color.White,
                 shape = AppShapes.CircleRadius,
-                icon = { Icon(Icons.Rounded.PersonAdd, null) },
-                text = { Text("Nouvel Adhérent", fontWeight = FontWeight.Bold) }
+                icon = { Icon(Icons.Rounded.PersonAdd, contentDescription = null) },
+                text = { Text("Nouvel adhérent", fontWeight = FontWeight.Bold) }
             )
         },
         containerColor = AppColors.AppBackground
@@ -87,18 +127,30 @@ fun DashboardScreen(
                     .background(AppColors.AppBackground),
                 contentPadding = PaddingValues(bottom = 120.dp)
             ) {
-                // ── IMMERSIVE HEADER ──
                 item {
-                    PremiumDashboardHeader(
-                        initials = initials,
-                        fullName = fullName,
-                        rootNavController = rootNavController
+                    SenCsuHeader(
+                        title = "Bonjour, $fullName",
+                        subtitle = "Vue terrain des enrôlements, contrôles et synchronisations.",
+                        leading = { HeaderAvatar(initials) },
+                        trailing = {
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                HeaderIconButton(
+                                    icon = Icons.Rounded.QrCodeScanner,
+                                    contentDescription = "Scanner",
+                                    onClick = { rootNavController.navigate(Screen.QRScanner.route) }
+                                )
+                                HeaderIconButton(
+                                    icon = Icons.Rounded.Notifications,
+                                    contentDescription = "Notifications",
+                                    onClick = { rootNavController.navigate(Screen.Notifications.route) }
+                                )
+                            }
+                        }
                     )
                 }
 
-                // ── QUICK ACTIONS ──
                 item {
-                    QuickActionGrid(
+                    QuickActions(
                         onAdd = { rootNavController.navigate(Screen.AddMember.route) },
                         onScan = { rootNavController.navigate(Screen.QRScanner.route) },
                         onSync = { viewModel.syncData() },
@@ -106,77 +158,71 @@ fun DashboardScreen(
                     )
                 }
 
-                // ── BANNERS ──
                 if (showSyncPrompt && pendingCount > 0) {
                     item {
-                        SyncPromptBanner(
-                            pendingCount = pendingCount,
-                            onSync = { viewModel.syncData() },
-                            onDismiss = { viewModel.dismissSyncPrompt() }
+                        InfoBanner(
+                            title = "Synchronisation",
+                            message = "$pendingCount dossier(s) en attente d'envoi.",
+                            icon = Icons.Rounded.CloudUpload,
+                            color = AppColors.ActionBlue,
+                            actionLabel = "Sync",
+                            onAction = { viewModel.syncData() },
+                            trailing = {
+                                IconButton(onClick = { viewModel.dismissSyncPrompt() }) {
+                                    Icon(Icons.Rounded.Close, null, modifier = Modifier.size(16.dp), tint = AppColors.TextSub)
+                                }
+                            }
                         )
                     }
                 }
 
                 if (dashboardState.error != null && !isLoading) {
                     item {
-                        ErrorBanner(
+                        InfoBanner(
+                            title = "Connexion",
                             message = dashboardState.error ?: "Erreur de connexion",
-                            onRetry = { viewModel.refresh() }
+                            icon = Icons.Rounded.ErrorOutline,
+                            color = AppColors.StatusRed,
+                            actionLabel = "Réessayer",
+                            onAction = { viewModel.refresh() }
                         )
                     }
                 }
 
-                // ── STATS SECTION ──
                 item {
-                    SectionTitle(
-                        title = "Performance Terrain",
+                    SectionHeader(
+                        title = "Performance terrain",
                         subtitle = "Aperçu de vos activités d'enrôlement"
                     )
                 }
 
                 item {
-                    StatsGrid(
-                        total = adherents.size,
-                        active = activeCount,
-                        pending = pendingCount
-                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        MetricCard("Dossiers", adherents.size.toString(), Icons.Rounded.Group, AppColors.BrandBlue, Modifier.weight(1f))
+                        MetricCard("Actifs", activeCount.toString(), Icons.Rounded.Person, AppColors.StatusGreen, Modifier.weight(1f))
+                        MetricCard("A traiter", (pendingCount + inactiveCount).toString(), Icons.Rounded.Sync, AppColors.StatusOrange, Modifier.weight(1f))
+                    }
                 }
 
-                // ── RECENT ACTIVITY ──
                 if (adherents.isNotEmpty()) {
                     item {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 12.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column {
-                                Text(
-                                    "Adhérents récents",
-                                    fontWeight = FontWeight.Black,
-                                    color = AppColors.TextMain,
-                                    fontSize = 16.sp
-                                )
-                                Text(
-                                    "Derniers dossiers enregistrés",
-                                    color = AppColors.TextSub,
-                                    style = MaterialTheme.typography.labelSmall
-                                )
-                            }
-                            if (adherents.size > 5) {
-                                TextButton(onClick = onNavigateToAdherents) {
-                                    Text("Voir tout", color = AppColors.BrandBlue, fontWeight = FontWeight.Bold)
-                                }
-                            }
-                        }
+                        SectionHeader(
+                            title = "Adhérents récents",
+                            subtitle = "Derniers dossiers enregistrés",
+                            actionLabel = if (adherents.size > 5) "Voir tout" else null,
+                            onAction = if (adherents.size > 5) onNavigateToAdherents else null
+                        )
                     }
 
-                    items(adherents.take(5)) { adherent ->
+                    items(adherents.take(5), key = { it.id ?: it.hashCode() }) { adherent ->
                         AnimatedVisibility(
-                            visible = showContent,
-                            enter = fadeIn(tween(400)) + slideInHorizontally(tween(400)) { it / 10 }
+                            visible = showRows,
+                            enter = fadeIn(tween(350)) + slideInVertically(tween(350)) { 24 }
                         ) {
                             DashboardAdherentRow(
                                 adherent = adherent,
@@ -190,7 +236,11 @@ fun DashboardScreen(
                     }
                 } else if (!isLoading && dashboardState.error == null) {
                     item {
-                        EmptyState()
+                        EmptyStateBlock(
+                            title = "Aucun adhérent trouvé",
+                            subtitle = "Les nouveaux enrôlements apparaîtront ici après validation.",
+                            icon = Icons.Rounded.Search
+                        )
                     }
                 }
             }
@@ -199,92 +249,7 @@ fun DashboardScreen(
 }
 
 @Composable
-private fun PremiumDashboardHeader(
-    initials: String,
-    fullName: String,
-    rootNavController: NavController
-) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(200.dp)
-            .background(
-                Brush.verticalGradient(
-                    listOf(AppColors.BrandBlueDark, AppColors.BrandBlue)
-                )
-            )
-            .statusBarsPadding()
-    ) {
-        // Decorative elements
-        Box(
-            Modifier
-                .size(150.dp)
-                .align(Alignment.TopEnd)
-                .offset(x = 40.dp, y = (-40).dp)
-                .clip(CircleShape)
-                .background(Color.White.copy(alpha = 0.05f))
-        )
-
-        Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(20.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Profile Avatar
-            Surface(
-                modifier = Modifier.size(64.dp),
-                shape = AppShapes.LargeRadius,
-                color = Color.White.copy(alpha = 0.15f),
-                border = BorderStroke(1.5.dp, Color.White.copy(alpha = 0.2f))
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Text(
-                        initials,
-                        color = Color.White,
-                        fontWeight = FontWeight.Black,
-                        fontSize = 20.sp
-                    )
-                }
-            }
-
-            Spacer(Modifier.width(16.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    "Bonjour,",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White.copy(alpha = 0.7f)
-                )
-                Text(
-                    fullName,
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Black,
-                    color = Color.White
-                )
-            }
-
-            // Notification/Scan icons
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                IconButton(
-                    onClick = { rootNavController.navigate(Screen.QRScanner.route) },
-                    modifier = Modifier.background(Color.White.copy(alpha = 0.1f), CircleShape)
-                ) {
-                    Icon(Icons.Rounded.QrCodeScanner, null, tint = Color.White, modifier = Modifier.size(20.dp))
-                }
-                IconButton(
-                    onClick = { /* Notifications */ },
-                    modifier = Modifier.background(Color.White.copy(alpha = 0.1f), CircleShape)
-                ) {
-                    Icon(Icons.Rounded.Notifications, null, tint = Color.White, modifier = Modifier.size(20.dp))
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun QuickActionGrid(
+private fun QuickActions(
     onAdd: () -> Unit,
     onScan: () -> Unit,
     onSync: () -> Unit,
@@ -293,234 +258,73 @@ private fun QuickActionGrid(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .offset(y = (-24).dp)
-            .padding(horizontal = 16.dp),
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        QuickActionCard(
-            label = "Enrôler",
-            icon = Icons.Rounded.PersonAdd,
-            color = AppColors.BrandBlue,
-            onClick = onAdd,
-            modifier = Modifier.weight(1f)
-        )
-        QuickActionCard(
-            label = "Vérifier",
-            icon = Icons.Rounded.QrCode,
-            color = AppColors.GoldAccent,
-            onClick = onScan,
-            modifier = Modifier.weight(1f)
-        )
-        QuickActionCard(
+        ActionTile("Enrôler", Icons.Rounded.PersonAdd, AppColors.BrandBlue, onAdd, Modifier.weight(1f))
+        ActionTile("Vérifier", Icons.Rounded.QrCode, AppColors.GoldAccent, onScan, Modifier.weight(1f))
+        ActionTile(
             label = "Synchroniser",
             icon = Icons.Rounded.Sync,
             color = if (pendingCount > 0) AppColors.ActionBlue else AppColors.StatusGrey,
             onClick = onSync,
-            badge = if (pendingCount > 0) pendingCount.toString() else null,
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f),
+            badge = pendingCount.takeIf { it > 0 }?.toString()
         )
-    }
-}
-
-@Composable
-private fun QuickActionCard(
-    label: String,
-    icon: ImageVector,
-    color: Color,
-    onClick: () -> Unit,
-    badge: String? = null,
-    modifier: Modifier = Modifier
-) {
-    Surface(
-        onClick = onClick,
-        modifier = modifier,
-        shape = AppShapes.LargeRadius,
-        color = AppColors.SurfaceBackground,
-        shadowElevation = 6.dp,
-        border = BorderStroke(1.dp, AppColors.BorderColorLight)
-    ) {
-        Box {
-            Column(
-                modifier = Modifier.padding(vertical = 16.dp, horizontal = 8.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Icon(icon, null, tint = color, modifier = Modifier.size(28.dp))
-                Text(
-                    label,
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = AppColors.TextMain
-                )
-            }
-            if (badge != null) {
-                Surface(
-                    modifier = Modifier.align(Alignment.TopEnd).padding(6.dp),
-                    shape = CircleShape,
-                    color = AppColors.StatusRed,
-                    contentColor = Color.White
-                ) {
-                    Text(
-                        badge,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Black
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun StatsGrid(total: Int, active: Int, pending: Int) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        MiniMetricCard("Dossiers", total.toString(), AppColors.BrandBlue, Modifier.weight(1f))
-        MiniMetricCard("Actifs", active.toString(), AppColors.StatusGreen, Modifier.weight(1f))
-        MiniMetricCard("En attente", pending.toString(), AppColors.StatusOrange, Modifier.weight(1f))
-    }
-}
-
-@Composable
-private fun MiniMetricCard(label: String, value: String, color: Color, modifier: Modifier) {
-    Surface(
-        modifier = modifier,
-        shape = AppShapes.MediumRadius,
-        color = color.withAlpha(0.05f),
-        border = BorderStroke(1.dp, color.withAlpha(0.12f))
-    ) {
-        Column(
-            modifier = Modifier.padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black, color = color)
-            Text(label, style = MaterialTheme.typography.labelSmall, color = AppColors.TextSub)
-        }
     }
 }
 
 @Composable
 private fun DashboardAdherentRow(adherent: AdherentDto, onClick: () -> Unit) {
-    val name = "${adherent.prenoms ?: ""} ${adherent.nom ?: ""}".trim()
+    val name = "${adherent.prenoms.orEmpty()} ${adherent.nom.orEmpty()}".trim().ifEmpty { "Sans nom" }
     val isActive = adherent.actif == true
 
-    Card(
+    Surface(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp),
+            .padding(horizontal = 16.dp, vertical = 5.dp),
         shape = AppShapes.MediumRadius,
-        colors = CardDefaults.cardColors(containerColor = AppColors.SurfaceBackground),
-        border = BorderStroke(0.5.dp, AppColors.BorderColorLight)
+        color = AppColors.SurfaceBackground,
+        border = BorderStroke(1.dp, AppColors.BorderColorLight),
+        shadowElevation = 1.dp
     ) {
         Row(
             modifier = Modifier.padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Avatar simple
-            Surface(
-                modifier = Modifier.size(40.dp),
-                shape = CircleShape,
-                color = AppColors.SurfaceAlt
-            ) {
+            Surface(modifier = Modifier.size(44.dp), shape = CircleShape, color = AppColors.SurfaceAlt) {
                 Box(contentAlignment = Alignment.Center) {
-                    Icon(Icons.Rounded.Person, null, tint = AppColors.TextSub, modifier = Modifier.size(20.dp))
+                    Icon(Icons.Rounded.Person, null, tint = AppColors.TextSub, modifier = Modifier.size(22.dp))
                 }
             }
 
-            Spacer(Modifier.width(12.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 Text(
-                    name.ifEmpty { "Sans nom" },
+                    text = name,
+                    style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 14.sp,
                     color = AppColors.TextMain,
-                    maxLines = 1
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    adherent.matricule ?: "Pas de matricule",
+                    text = adherent.matricule ?: "Matricule non renseigné",
                     style = MaterialTheme.typography.labelSmall,
-                    color = AppColors.TextDisabled
+                    color = AppColors.TextDisabled,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
 
-            Surface(
-                shape = AppShapes.CircleRadius,
-                color = if (isActive) AppColors.StatusGreenSoft else AppColors.StatusRedSoft
-            ) {
-                Text(
-                    if (isActive) "Actif" else "Inactif",
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold,
+            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                StatusPill(
+                    text = if (isActive) "Actif" else "Inactif",
                     color = if (isActive) AppColors.StatusGreen else AppColors.StatusRed
                 )
+                RowArrow()
             }
         }
-    }
-}
-
-@Composable
-private fun SyncPromptBanner(pendingCount: Int, onSync: () -> Unit, onDismiss: () -> Unit) {
-    Surface(
-        modifier = Modifier.padding(16.dp).fillMaxWidth(),
-        color = AppColors.ActionBlue.withAlpha(0.1f),
-        shape = AppShapes.LargeRadius,
-        border = BorderStroke(1.dp, AppColors.ActionBlue.withAlpha(0.2f))
-    ) {
-        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Rounded.CloudUpload, null, tint = AppColors.ActionBlue)
-            Spacer(Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text("Synchronisation", fontWeight = FontWeight.Bold, color = AppColors.ActionBlue, fontSize = 14.sp)
-                Text("$pendingCount dossier(s) en attente", fontSize = 12.sp, color = AppColors.TextSub)
-            }
-            TextButton(onClick = onSync) { Text("Sync", fontWeight = FontWeight.Black) }
-            IconButton(onClick = onDismiss) { Icon(Icons.Rounded.Close, null, modifier = Modifier.size(16.dp)) }
-        }
-    }
-}
-
-@Composable
-private fun ErrorBanner(message: String, onRetry: () -> Unit) {
-    Surface(
-        modifier = Modifier.padding(16.dp).fillMaxWidth(),
-        color = AppColors.StatusRedSoft,
-        shape = AppShapes.LargeRadius,
-        border = BorderStroke(1.dp, AppColors.StatusRed.withAlpha(0.2f))
-    ) {
-        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Rounded.Error, null, tint = AppColors.StatusRed)
-            Spacer(Modifier.width(12.dp))
-            Text(message, fontSize = 12.sp, color = AppColors.TextSub, modifier = Modifier.weight(1f))
-            TextButton(onClick = onRetry) { Text("Réessayer", color = AppColors.StatusRed) }
-        }
-    }
-}
-
-@Composable
-private fun EmptyState() {
-    Column(
-        modifier = Modifier.fillMaxWidth().padding(48.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Icon(Icons.Rounded.Search, null, modifier = Modifier.size(48.dp), tint = AppColors.TextDisabled)
-        Text("Aucun adhérent trouvé", fontWeight = FontWeight.Bold, color = AppColors.TextMain)
-        Text("Les nouveaux enrôlements apparaîtront ici", style = MaterialTheme.typography.bodySmall, color = AppColors.TextSub)
-    }
-}
-
-@Composable
-private fun SectionTitle(title: String, subtitle: String) {
-    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-        Text(title, fontWeight = FontWeight.Black, color = AppColors.TextMain, fontSize = 16.sp)
-        Text(subtitle, color = AppColors.TextSub, style = MaterialTheme.typography.labelSmall)
     }
 }

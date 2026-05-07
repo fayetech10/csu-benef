@@ -67,8 +67,8 @@ object AppColors {
 }
 
 object AppShapes {
-    val LargeRadius: RoundedCornerShape = RoundedCornerShape(18.dp)
-    val MediumRadius: RoundedCornerShape = RoundedCornerShape(12.dp)
+    val LargeRadius: RoundedCornerShape = RoundedCornerShape(8.dp)
+    val MediumRadius: RoundedCornerShape = RoundedCornerShape(8.dp)
     val SmallRadius: RoundedCornerShape = RoundedCornerShape(8.dp)
     val ExtraSmallRadius: RoundedCornerShape = RoundedCornerShape(4.dp)
     val CircleRadius: RoundedCornerShape = RoundedCornerShape(50)

@@ -221,7 +221,7 @@ private fun CardRecto(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "║ ║ ║║║║ ║ ║",
+                            text = "║║║║║║║║",
                             style = TextStyle(
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold,
