@@ -116,12 +116,12 @@ fun SubscriberBottomNavigation(
 
     Surface(
         modifier = Modifier
-            .padding(horizontal = 20.dp, vertical = 16.dp)
-            .height(68.dp)
-            .shadow(14.dp, CircleShape, ambientColor = AppColors.BrandBlue.copy(alpha = 0.12f), spotColor = AppColors.BrandBlue.copy(alpha = 0.16f)),
-        shape = CircleShape,
+            .fillMaxWidth()
+            .height(72.dp)
+            .shadow(8.dp, androidx.compose.ui.graphics.RectangleShape, ambientColor = AppColors.BrandBlue.copy(alpha = 0.08f), spotColor = AppColors.BrandBlue.copy(alpha = 0.12f)),
+        shape = androidx.compose.ui.graphics.RectangleShape,
         color = Color.Transparent,
-        border = BorderStroke(1.dp, AppColors.BorderColorLight)
+        border = BorderStroke(1.dp, AppColors.BorderColorLight.copy(alpha = 0.5f))
     ) {
         Box(
             modifier = Modifier

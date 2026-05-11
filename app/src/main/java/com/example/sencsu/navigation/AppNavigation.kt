@@ -45,10 +45,24 @@ fun AppNavigation(
     NavHost(
         navController = navController,
         startDestination = Screen.Splash.route,
-        enterTransition = { fadeIn(tween(400)) + slideInHorizontally(initialOffsetX = { 1000 }, animationSpec = tween(400)) },
-        exitTransition = { fadeOut(tween(400)) + slideOutHorizontally(targetOffsetX = { -1000 }, animationSpec = tween(400)) },
-        popEnterTransition = { fadeIn(tween(400)) + slideInHorizontally(initialOffsetX = { -1000 }, animationSpec = tween(400)) },
-        popExitTransition = { fadeOut(tween(400)) + slideOutHorizontally(targetOffsetX = { 1000 }, animationSpec = tween(400)) }
+        enterTransition = { 
+            fadeIn(tween(500, easing = androidx.compose.animation.core.FastOutSlowInEasing)) + 
+            slideInHorizontally(initialOffsetX = { 400 }, animationSpec = tween(500, easing = androidx.compose.animation.core.FastOutSlowInEasing)) +
+            scaleIn(initialScale = 0.95f, animationSpec = tween(500))
+        },
+        exitTransition = { 
+            fadeOut(tween(400)) + 
+            slideOutHorizontally(targetOffsetX = { -400 }, animationSpec = tween(400))
+        },
+        popEnterTransition = { 
+            fadeIn(tween(500)) + 
+            slideInHorizontally(initialOffsetX = { -400 }, animationSpec = tween(500)) +
+            scaleIn(initialScale = 0.95f, animationSpec = tween(500))
+        },
+        popExitTransition = { 
+            fadeOut(tween(400)) + 
+            slideOutHorizontally(targetOffsetX = { 400 }, animationSpec = tween(400))
+        }
     ) {
         composable(Screen.Splash.route) {
             SplashScreen(

@@ -54,6 +54,7 @@ import com.example.sencsu.domain.viewmodel.DetailsUiEvent
 import com.example.sencsu.theme.AppColors
 import com.example.sencsu.theme.AppShapes
 import com.example.sencsu.theme.withAlpha
+import com.example.sencsu.utils.Formatters
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
@@ -203,7 +204,6 @@ private fun DetailBody(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
             .background(AppColors.AppBackground)
             .padding(horizontal = 20.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp)
@@ -285,6 +285,7 @@ private fun DetailBody(
     }
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 private fun PremiumHeader(
     adherent: AdherentDto,
@@ -356,7 +357,7 @@ private fun PremiumHeader(
                 )
                 
                 // Status Badge (Dynamic)
-                val endDate = com.example.sencsu.utils.Formatters.getCoverageEndDate(adherent.coveragePeriod)
+                val endDate = Formatters.getCoverageEndDate(adherent.coveragePeriod)
                 val isExpired = endDate != null && endDate.isBefore(java.time.LocalDate.now())
                 val statusColor = if (isExpired) AppColors.StatusRed else AppColors.StatusGreen
                 
