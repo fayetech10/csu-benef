@@ -52,4 +52,11 @@ sealed class BottomNavItem(
         Icons.Outlined.Person,
         "Profil"
     )
+
+    object Notifications : BottomNavItem(
+        "notifications_content",
+        Icons.Rounded.Notifications,
+        Icons.Outlined.Notifications,
+        "Notifs"
+    )
 }

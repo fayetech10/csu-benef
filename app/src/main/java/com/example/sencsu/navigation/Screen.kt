@@ -56,13 +56,13 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector)
     }
 
     object MedicalHistory : Screen(
-        "medical_history/{adherentId}?pcId={pcId}&pcName={pcName}",
+        "medical_history/{matricule}?pcId={pcId}&pcName={pcName}",
         "Historique Médical",
         Icons.Default.LocalHospital
     ) {
-        fun createRoute(adherentId: String, pcId: String? = null, pcName: String? = null) =
-            if (pcId != null) "medical_history/$adherentId?pcId=$pcId&pcName=${pcName ?: ""}"
-            else "medical_history/$adherentId"
+        fun createRoute(matricule: String, pcId: String? = null, pcName: String? = null) =
+            if (pcId != null) "medical_history/$matricule?pcId=$pcId&pcName=${pcName ?: ""}"
+            else "medical_history/$matricule"
     }
 
     object DependentDetails : Screen(

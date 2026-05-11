@@ -135,7 +135,9 @@ fun DependentDetailsScreen(
                         DependentActionsRow(
                             onHistory = { 
                                 val name = "${pc.prenoms} ${pc.nom}".trim()
-                                onNavigateToHistory(adherentId, pcId, name) 
+                                uiState.adherent?.matricule?.let { matricule ->
+                                    onNavigateToHistory(matricule, pcId, name)
+                                }
                             },
                             onQR = { /* Déjà affiché */ }
                         )

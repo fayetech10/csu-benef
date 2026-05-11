@@ -116,7 +116,9 @@ class AddAdherentViewModel @Inject constructor(
     private val adherentRepository: IDashboardRepository,
     private val fileRepository: IFileRepository,
     private val adherentDao: AdherentDao,
-    private val adherentRepo: IAdherentRepository
+    private val adherentRepo: IAdherentRepository,
+    private val authRepository: com.example.sencsu.domain.repository.IAuthRepository,
+    private val sessionManager: com.example.sencsu.data.repository.SessionManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AddAdherentUiState())
@@ -580,14 +582,33 @@ class AddAdherentViewModel @Inject constructor(
         _uiEvent.send(AddAdherentUiEvent.ShowSnackbar(msg))
     }
 
-    fun updatePassword(adherentId: String, oldPassword: String, newPassword: String, onComplete: (Boolean, String?) -> Unit) {
+    fun updatePassword(
+        adherentId: String,
+        matricule: String,
+        oldPassword: String,
+        newPassword: String,
+        onComplete: (Boolean, String?) -> Unit
+    ) {
         viewModelScope.launch {
             try {
                 _uiState.update { it.copy(isLoading = true) }
                 val response = adherentRepo.updatePassword(adherentId, oldPassword, newPassword)
                 if (response.isSuccess) {
                     _uiEvent.send(AddAdherentUiEvent.ShowSnackbar("Mot de passe mis à jour !"))
-                    onComplete(true, null)
+                    
+                    // Connexion automatique après mise à jour réussie du mot de passe
+                    try {
+                        val loginResponse = authRepository.adherentLogin(matricule, newPassword)
+                        if (loginResponse.accessToken != null && loginResponse.user != null) {
+                            sessionManager.saveSession(loginResponse.accessToken, loginResponse.user)
+                            _uiEvent.send(AddAdherentUiEvent.ShowSnackbar("Connexion réussie !"))
+                            onComplete(true, null)
+                        } else {
+                            onComplete(false, "Mise à jour réussie, mais connexion automatique impossible.")
+                        }
+                    } catch (e: Exception) {
+                        onComplete(false, "Mise à jour réussie, mais erreur de connexion: ${e.message}")
+                    }
                 } else {
                     val errorMsg = response.exceptionOrNull()?.message ?: "Erreur"
                     _uiEvent.send(AddAdherentUiEvent.ShowSnackbar(errorMsg))

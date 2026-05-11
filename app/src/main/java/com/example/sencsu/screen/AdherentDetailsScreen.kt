@@ -68,6 +68,7 @@ fun AdherentDetailsScreen(
     viewModelP: AddAdherentViewModel = hiltViewModel(),
     onNavigateBack: () -> Unit,
     onNavigateToEdit: (String) -> Unit = {},
+    onNavigateToHistory: (String) -> Unit = {},
 ) {
     val state by viewModel.state.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -161,7 +162,8 @@ fun AdherentDetailsScreen(
                             sessionManager = viewModel.sessionManager,
                             viewModel = viewModel,
                             onPersonneClick = { showPersonneDetailsModal = it },
-                            onEdit = { onNavigateToEdit(state.adherent!!.id!!) }
+                            onEdit = { onNavigateToEdit(state.adherent!!.id!!) },
+                            onNavigateToHistory = onNavigateToHistory
                         )
                     }
                 }
@@ -195,7 +197,8 @@ private fun DetailBody(
     sessionManager: SessionManager,
     viewModel: AdherentDetailsViewModel,
     onPersonneClick: (PersonneChargeDto) -> Unit,
-    onEdit: () -> Unit
+    onEdit: () -> Unit,
+    onNavigateToHistory: (String) -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -206,7 +209,10 @@ private fun DetailBody(
         verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
         // ── QUICK ACTIONS DOCK ──
-        QuickActionDock(adherent)
+        QuickActionDock(
+            adherent = adherent,
+            onHistoryClick = { onNavigateToHistory(adherent.matricule ?: "") }
+        )
 
         // ── HEALTH CARD ──
         HealthInsuranceCard(
@@ -424,7 +430,10 @@ private fun HeaderButton(icon: ImageVector, onClick: () -> Unit) {
 }
 
 @Composable
-private fun QuickActionDock(adherent: AdherentDto) {
+private fun QuickActionDock(
+    adherent: AdherentDto,
+    onHistoryClick: () -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -434,6 +443,7 @@ private fun QuickActionDock(adherent: AdherentDto) {
             .padding(16.dp),
         horizontalArrangement = Arrangement.SpaceEvenly
     ) {
+        ActionIcon(Icons.Rounded.History, "Historique", AppColors.BrandBlue, onClick = onHistoryClick)
         ActionIcon(Icons.Rounded.Phone, "Appeler", AppColors.StatusGreen) {}
         ActionIcon(Icons.Rounded.Chat, "WhatsApp", Color(0xFF25D366)) {}
         ActionIcon(Icons.AutoMirrored.Rounded.Message, "SMS", AppColors.BrandBlue) {}

@@ -222,9 +222,9 @@ fun DependentsScreen(
                                     showForm = true
                                 },
                                 onHistory = {
-                                    adherent?.id?.let { adherentId ->
+                                    adherent?.matricule?.let { matricule ->
                                         member.id?.let { pcId ->
-                                            onNavigateToHistory(adherentId, pcId, member.displayName)
+                                            onNavigateToHistory(matricule, pcId, member.displayName)
                                         }
                                     }
                                 },
@@ -267,8 +267,8 @@ fun DependentsScreen(
             },
             onHistory = {
                 moreOptionsMember = null
-                adherent?.id?.let { adherentId ->
-                    member.id?.let { pcId -> onNavigateToHistory(adherentId, pcId, member.displayName) }
+                adherent?.matricule?.let { matricule ->
+                    member.id?.let { pcId -> onNavigateToHistory(matricule, pcId, member.displayName) }
                 }
             },
             onEdit = {

@@ -131,14 +131,15 @@ interface ApiService {
     // SERVICES MÉDICAUX
     // =========================================================================
 
-    @GET("/api/services-medicaux/adherent/{adherentId}")
+    @GET("/api/services-medicaux/adherent/{matricule}")
     suspend fun getServicesMedicaux(
-        @Path("adherentId") adherentId: String
+        @Path("matricule") matricule: String,
+        @Query("personneChargeId") personneChargeId: String? = null
     ): ApiResponse<List<ServiceMedicalDto>>
 
-    @GET("/api/services-medicaux/recent/{adherentId}")
+    @GET("/api/services-medicaux/recent/{matricule}")
     suspend fun getRecentServicesMedicaux(
-        @Path("adherentId") adherentId: String
+        @Path("matricule") matricule: String
     ): ApiResponse<List<ServiceMedicalDto>>
 
     @GET("/api/services-medicaux/personne-charge/{pcId}")
@@ -146,9 +147,9 @@ interface ApiService {
         @Path("pcId") pcId: String
     ): ApiResponse<List<ServiceMedicalDto>>
 
-    @GET("/api/services-medicaux/summary/{adherentId}")
+    @GET("/api/services-medicaux/summary/{matricule}")
     suspend fun getServicesSummary(
-        @Path("adherentId") adherentId: String
+        @Path("matricule") matricule: String
     ): ApiResponse<ServicesSummaryDto>
 
 

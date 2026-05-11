@@ -68,8 +68,8 @@ fun BeneficiaryMainScreen(rootNavController: NavController) {
         ) {
             composable(BottomNavItem.Home.route) {
                 BeneficiaryDashboardScreen(
-                    onNavigateToHistory = { adherentId ->
-                        rootNavController.navigate(Screen.MedicalHistory.createRoute(adherentId))
+                    onNavigateToHistory = { matricule ->
+                        rootNavController.navigate(Screen.MedicalHistory.createRoute(matricule))
                     },
                     onNavigateToCard = { adherentId ->
                         rootNavController.navigate(Screen.DigitalCard.createRoute(adherentId))
@@ -82,8 +82,8 @@ fun BeneficiaryMainScreen(rootNavController: NavController) {
 
             composable(BottomNavItem.Dependents.route) {
                 DependentsScreen(
-                    onNavigateToHistory = { adherentId, pcId, pcName ->
-                        rootNavController.navigate(Screen.MedicalHistory.createRoute(adherentId, pcId, pcName))
+                    onNavigateToHistory = { matricule, pcId, pcName ->
+                        rootNavController.navigate(Screen.MedicalHistory.createRoute(matricule, pcId, pcName))
                     },
                     onNavigateToDetails = { adherentId, pcId ->
                         rootNavController.navigate(Screen.DependentDetails.createRoute(adherentId, pcId))
@@ -93,8 +93,8 @@ fun BeneficiaryMainScreen(rootNavController: NavController) {
 
             composable(BottomNavItem.Profile.route) {
                 ProfileScreen(
-                    onNavigateToHistory = { adherentId ->
-                        rootNavController.navigate(Screen.MedicalHistory.createRoute(adherentId))
+                    onNavigateToHistory = { matricule ->
+                        rootNavController.navigate(Screen.MedicalHistory.createRoute(matricule))
                     },
                     onNavigateToEdit = { adherentId ->
                         rootNavController.navigate(Screen.EditProfile.createRoute(adherentId))
@@ -106,6 +106,10 @@ fun BeneficiaryMainScreen(rootNavController: NavController) {
                         }
                     }
                 )
+            }
+
+            composable(BottomNavItem.Notifications.route) {
+                NotificationsScreen()
             }
         }
     }
@@ -123,6 +127,7 @@ fun BeneficiaryBottomNavigation(
     val items = listOf(
         BottomNavItem.Home,
         BottomNavItem.Dependents,
+        BottomNavItem.Notifications,
         BottomNavItem.Profile
     )
 

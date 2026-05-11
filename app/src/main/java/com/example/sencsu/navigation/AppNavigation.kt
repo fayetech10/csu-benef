@@ -147,8 +147,8 @@ fun AppNavigation(
                 matricule = matricule,
                 defaultPassword = defaultPassword,
                 onSuccess = {
-                    navController.navigate(Screen.BeneficiaryLogin.route) {
-                        popUpTo(Screen.PasswordUpdate.route) { inclusive = true }
+                    navController.navigate("beneficiary_tabs") {
+                        popUpTo(0) { inclusive = true }
                     }
                 }
             )
@@ -165,7 +165,7 @@ fun AppNavigation(
         composable(
             route = Screen.MedicalHistory.route,
             arguments = listOf(
-                androidx.navigation.navArgument("adherentId") { type = androidx.navigation.NavType.StringType },
+                androidx.navigation.navArgument("matricule") { type = androidx.navigation.NavType.StringType },
                 androidx.navigation.navArgument("pcId") { 
                     type = androidx.navigation.NavType.StringType
                     nullable = true
@@ -251,6 +251,9 @@ fun AppNavigation(
                 onNavigateBack = { navController.popBackStack() },
                 onNavigateToEdit = { id ->
                     navController.navigate(Screen.EditProfile.createRoute(id))
+                },
+                onNavigateToHistory = { matricule ->
+                    navController.navigate(Screen.MedicalHistory.createRoute(matricule))
                 }
             )
         }
@@ -325,8 +328,7 @@ fun AppNavigation(
             val localAdherentId = localAdherentIdStr?.toLongOrNull()
             val montantTotal = backStackEntry.arguments?.getInt("montantTotal")?.toDouble()
             // Décoder la route suivante
-            val nextRouteRaw = backStackEntry.arguments?.getString("nextRoute")
-            val nextRoute = if (nextRouteRaw != null) android.net.Uri.decode(nextRouteRaw) else null
+            val nextRoute = backStackEntry.arguments?.getString("nextRoute")
             
             Paiement(
                 adherentId = adherentId,

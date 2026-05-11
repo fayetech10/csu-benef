@@ -69,170 +69,87 @@ fun SplashScreen(
             .background(
                 Brush.verticalGradient(
                     colors = listOf(
-                        AppColors.BrandBlueDark,
-                        AppColors.BrandBlue,
-                        Color(0xFF0D4A33)
+                        Color(0xFF0F2027),
+                        Color(0xFF203A43),
+                        Color(0xFF2C5364)
                     )
                 )
             ),
         contentAlignment = Alignment.Center
     ) {
-        // ── Motifs décoratifs ──
+        // ── Motifs décoratifs subtils ──
         Box(
             modifier = Modifier
-                .size(300.dp)
-                .offset(x = (-100).dp, y = (-200).dp)
-                .clip(CircleShape)
-                .background(Color.White.copy(alpha = 0.03f))
-        )
-        Box(
-            modifier = Modifier
-                .size(200.dp)
-                .offset(x = 120.dp, y = 250.dp)
+                .size(500.dp)
+                .offset(x = (-150).dp, y = (-250).dp)
                 .clip(CircleShape)
                 .background(Color.White.copy(alpha = 0.02f))
         )
-
+        
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
             modifier = Modifier.padding(32.dp)
         ) {
-            // ── Logo avec anneau sénégalais ──
-            Box(
+            // ── Logo Central ──
+            androidx.compose.foundation.Image(
+                painter = androidx.compose.ui.res.painterResource(id = com.example.sencsu.R.drawable.logo_sencsu),
+                contentDescription = "Logo SenCSU",
                 modifier = Modifier
-                    .size(140.dp)
-                    .scale(logoScale),
-                contentAlignment = Alignment.Center
-            ) {
-                // Anneau externe aux couleurs du drapeau
-                Box(
-                    modifier = Modifier
-                        .size(140.dp)
-                        .rotate(ringRotation)
-                        .clip(CircleShape)
-                        .background(
-                            Brush.sweepGradient(
-                                listOf(
-                                    AppColors.SenegalGreen,
-                                    AppColors.GoldAccent,
-                                    AppColors.SenegalRed,
-                                    AppColors.SenegalGreen
-                                )
-                            )
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    // Fond blanc intérieur
-                    Surface(
-                        modifier = Modifier.size(120.dp),
-                        shape = CircleShape,
-                        color = Color.White,
-                        shadowElevation = 20.dp
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = Icons.Rounded.HealthAndSafety,
-                                contentDescription = null,
-                                modifier = Modifier.size(60.dp),
-                                tint = AppColors.BrandBlue
-                            )
-                        }
-                    }
-                }
-            }
+                    .size(240.dp)
+                    .scale(logoScale)
+                    .alpha(if (startAnimation) 1f else 0f),
+                contentScale = androidx.compose.ui.layout.ContentScale.Fit
+            )
 
-            Spacer(modifier = Modifier.height(36.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
             // ── Textes ──
             AnimatedVisibility(
                 visible = startAnimation,
-                enter = fadeIn(tween(800, delayMillis = 400)) + slideInVertically(
-                    tween(800, delayMillis = 400), initialOffsetY = { 30 }
+                enter = fadeIn(tween(1000, delayMillis = 500)) + slideInVertically(
+                    tween(1000, delayMillis = 500), initialOffsetY = { 20 }
                 )
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        "RÉPUBLIQUE DU SÉNÉGAL",
-                        fontSize = 10.sp,
+                        "SÉNÉGAL",
+                        fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White.copy(alpha = 0.5f),
-                        letterSpacing = 4.sp
+                        color = Color.White.copy(alpha = 0.6f),
+                        letterSpacing = 6.sp
                     )
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(12.dp))
                     Text(
                         "SenCSU",
-                        style = MaterialTheme.typography.displaySmall,
+                        style = MaterialTheme.typography.displayMedium,
                         fontWeight = FontWeight.Black,
-                        color = Color.White
-                    )
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        "Couverture Santé Universelle",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = Color.White.copy(alpha = 0.7f),
-                        fontWeight = FontWeight.Light,
+                        color = Color.White,
                         letterSpacing = 2.sp
+                    )
+                    Text(
+                        "L'assurance pour tous",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = Color.White.copy(alpha = 0.8f),
+                        fontWeight = FontWeight.Light,
+                        letterSpacing = 1.sp
                     )
                 }
             }
-
-            Spacer(Modifier.height(12.dp))
-
-            // Ligne dorée décorative
-            AnimatedVisibility(
-                visible = startAnimation,
-                enter = fadeIn(tween(600, delayMillis = 800)) + expandHorizontally(
-                    tween(600, delayMillis = 800)
-                )
-            ) {
-                Box(
-                    modifier = Modifier
-                        .width(60.dp)
-                        .height(3.dp)
-                        .background(AppColors.GoldAccent, CircleShape)
-                )
-            }
-        }
-
-        // ── Barre de progression ──
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 64.dp)
-                .width(160.dp)
-                .height(3.dp)
-                .background(Color.White.copy(0.15f), CircleShape)
-        ) {
-            val progress = remember { Animatable(0f) }
-            LaunchedEffect(Unit) {
-                progress.animateTo(
-                    targetValue = 1f,
-                    animationSpec = tween(2000, easing = FastOutSlowInEasing)
-                )
-            }
-            Box(
-                Modifier
-                    .fillMaxHeight()
-                    .fillMaxWidth(progress.value)
-                    .background(
-                        Brush.horizontalGradient(
-                            listOf(AppColors.GoldAccent, Color.White)
-                        ),
-                        CircleShape
-                    )
-            )
         }
 
         // ── Footer ──
         Text(
-            "Ministère de la Santé",
+            "MINISTÈRE DE LA SANTÉ ET DE L'ACTION SOCIALE",
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(bottom = 32.dp)
-                .alpha(if (startAnimation) 0.4f else 0f),
-            fontSize = 11.sp,
+                .padding(bottom = 48.dp)
+                .alpha(if (startAnimation) 0.5f else 0f),
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Bold,
             color = Color.White,
-            letterSpacing = 1.sp
+            letterSpacing = 2.sp,
+            textAlign = TextAlign.Center
         )
     }
 }

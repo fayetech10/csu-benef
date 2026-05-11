@@ -3,6 +3,7 @@ package com.example.sencsu.screen
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
@@ -11,6 +12,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -28,11 +32,21 @@ fun PasswordUpdateScreen(
     onSuccess: () -> Unit,
     viewModel: AddAdherentViewModel = hiltViewModel()
 ) {
-    var oldPassword by remember { mutableStateOf("") }
+    val actualDefaultPassword = remember(defaultPassword) {
+        if (defaultPassword.contains("communiqué") || defaultPassword.contains("SMS") || defaultPassword.isBlank()) {
+            "acmu00"
+        } else {
+            defaultPassword
+        }
+    }
+    var oldPassword by remember { mutableStateOf(actualDefaultPassword) }
     var newPassword by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
     var isSubmitting by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
+    var defaultPasswordVisible by remember { mutableStateOf(false) }
+    var newPasswordVisible by remember { mutableStateOf(false) }
+    var confirmPasswordVisible by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -82,13 +96,30 @@ fun PasswordUpdateScreen(
                 shape = AppShapes.MediumRadius
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                    Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         Text("Votre Matricule", color = AppColors.TextSub)
                         Text(matricule, fontWeight = FontWeight.Bold, color = AppColors.BrandBlue)
                     }
-                    Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                    Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         Text("Mot de passe par défaut", color = AppColors.TextSub)
-                        Text(defaultPassword, fontWeight = FontWeight.Bold)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = if (defaultPasswordVisible) actualDefaultPassword else "•".repeat(actualDefaultPassword.length.coerceAtLeast(6)),
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            IconButton(
+                                onClick = { defaultPasswordVisible = !defaultPasswordVisible },
+                                modifier = Modifier.size(24.dp)
+                            ) {
+                                Icon(
+                                    if (defaultPasswordVisible) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp),
+                                    tint = AppColors.TextSub
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -103,21 +134,27 @@ fun PasswordUpdateScreen(
             )
 
             OutlinedTextField(
-                value = oldPassword,
-                onValueChange = { oldPassword = it },
-                label = { Text("Ancien mot de passe") },
-                modifier = Modifier.fillMaxWidth(),
-                shape = AppShapes.MediumRadius,
-                leadingIcon = { Icon(Icons.Rounded.LockOpen, null) }
-            )
-
-            OutlinedTextField(
                 value = newPassword,
                 onValueChange = { newPassword = it },
                 label = { Text("Nouveau mot de passe") },
                 modifier = Modifier.fillMaxWidth(),
                 shape = AppShapes.MediumRadius,
-                leadingIcon = { Icon(Icons.Rounded.Lock, null) }
+                leadingIcon = { Icon(Icons.Rounded.Lock, null, tint = AppColors.BrandBlue) },
+                trailingIcon = {
+                    IconButton(onClick = { newPasswordVisible = !newPasswordVisible }) {
+                        Icon(
+                            if (newPasswordVisible) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility,
+                            contentDescription = if (newPasswordVisible) "Masquer" else "Afficher",
+                            tint = AppColors.TextSub
+                        )
+                    }
+                },
+                visualTransformation = if (newPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = AppColors.BrandBlue,
+                    focusedLabelColor = AppColors.BrandBlue
+                )
             )
 
             OutlinedTextField(
@@ -126,7 +163,22 @@ fun PasswordUpdateScreen(
                 label = { Text("Confirmer le mot de passe") },
                 modifier = Modifier.fillMaxWidth(),
                 shape = AppShapes.MediumRadius,
-                leadingIcon = { Icon(Icons.Rounded.LockReset, null) }
+                leadingIcon = { Icon(Icons.Rounded.LockReset, null, tint = AppColors.BrandBlue) },
+                trailingIcon = {
+                    IconButton(onClick = { confirmPasswordVisible = !confirmPasswordVisible }) {
+                        Icon(
+                            if (confirmPasswordVisible) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility,
+                            contentDescription = if (confirmPasswordVisible) "Masquer" else "Afficher",
+                            tint = AppColors.TextSub
+                        )
+                    }
+                },
+                visualTransformation = if (confirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = AppColors.BrandBlue,
+                    focusedLabelColor = AppColors.BrandBlue
+                )
             )
 
             if (error != null) {
@@ -150,7 +202,7 @@ fun PasswordUpdateScreen(
                         return@Button
                     }
                     isSubmitting = true
-                    viewModel.updatePassword(adherentId, oldPassword, newPassword) { success, msg ->
+                    viewModel.updatePassword(adherentId, matricule, oldPassword, newPassword) { success, msg ->
                         isSubmitting = false
                         if (success) {
                             onSuccess()

@@ -50,8 +50,10 @@ class BeneficiaryDashboardViewModel @Inject constructor(
                 .onSuccess { adherent ->
                     _uiState.update { it.copy(adherent = adherent, isLoading = false) }
                     // Charger les services médicaux récents
-                    adherent.id?.let { 
+                    adherent.matricule?.let { 
                         loadRecentServices(it) 
+                    }
+                    adherent.id?.let {
                         syncFcmToken(it) // Synchroniser le token FCM
                     }
                 }
@@ -72,10 +74,10 @@ class BeneficiaryDashboardViewModel @Inject constructor(
         }
     }
 
-    private fun loadRecentServices(adherentId: String) {
+    private fun loadRecentServices(matricule: String) {
         viewModelScope.launch {
             try {
-                val response = apiService.getRecentServicesMedicaux(adherentId)
+                val response = apiService.getRecentServicesMedicaux(matricule)
                 val services = response.data ?: emptyList()
                 _uiState.update { it.copy(recentServices = services) }
             } catch (e: Exception) {

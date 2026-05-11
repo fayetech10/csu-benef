@@ -87,9 +87,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.res.painterResource
 import coil.compose.AsyncImage
 import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
+import com.example.sencsu.R
 import com.example.sencsu.components.QrCodeImage
 import com.example.sencsu.components.ServerImage
 import com.example.sencsu.configs.ApiConfig
@@ -148,9 +152,7 @@ fun BeneficiaryDashboardScreen(
                     HomeHero(
                         adherent = adherent,
                         sessionManager = viewModel.sessionManager,
-                        isLoading = uiState.isLoading,
-                        onProfileClick = onProfileClick,
-                        onRefresh = { viewModel.refresh() }
+                        onProfileClick = onProfileClick
                     )
                 }
 
@@ -177,7 +179,7 @@ fun BeneficiaryDashboardScreen(
                     AnimatedBlock(showContent, 150) {
                         HomeQuickActions(
                             onOpenCard = { adherent.id?.let(onNavigateToCard) },
-                            onHistory = { adherent.id?.let(onNavigateToHistory) },
+                            onHistory = { adherent.matricule?.let(onNavigateToHistory) },
                             onSupport = {}
                         )
                     }
@@ -195,7 +197,7 @@ fun BeneficiaryDashboardScreen(
                             title = "Activite recente",
                             subtitle = "Derniers soins et remboursements",
                             actionLabel = "Tout voir",
-                            onAction = { adherent.id?.let(onNavigateToHistory) }
+                            onAction = { adherent.matricule?.let(onNavigateToHistory) }
                         )
                     }
                     items(uiState.recentServices.take(3), key = { it.id ?: it.hashCode().toString() }) { service ->
@@ -203,7 +205,7 @@ fun BeneficiaryDashboardScreen(
                     }
                 } else {
                     item {
-                        EmptyActivityCard(onHistory = { adherent.id?.let(onNavigateToHistory) })
+                        EmptyActivityCard(onHistory = { adherent.matricule?.let(onNavigateToHistory) })
                     }
                 }
 
@@ -262,51 +264,125 @@ private fun AnimatedBlock(
 private fun HomeHero(
     adherent: AdherentDto?,
     sessionManager: com.example.sencsu.data.repository.SessionManager,
-    isLoading: Boolean,
-    onProfileClick: () -> Unit,
-    onRefresh: () -> Unit
+    onProfileClick: () -> Unit
 ) {
     val context = LocalContext.current
     val firstName = adherent?.prenoms?.split(" ")?.firstOrNull()?.ifBlank { null } ?: "Beneficiaire"
     val initials = "${adherent?.prenoms?.firstOrNull()?.uppercase() ?: ""}${adherent?.nom?.firstOrNull()?.uppercase() ?: ""}".ifEmpty { "?" }
 
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(282.dp)
-            .background(Brush.verticalGradient(AppGradients.Brand))
-            .statusBarsPadding()
-            .padding(horizontal = 20.dp, vertical = 18.dp)
-    ) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        // ── Cover Photo Section ──
         Box(
             modifier = Modifier
-                .size(160.dp)
-                .align(Alignment.TopEnd)
-                .offset(x = 48.dp, y = (-52).dp)
-                .clip(CircleShape)
-                .background(Color.White.copy(alpha = 0.06f))
-        )
-        Box(
-            modifier = Modifier
-                .size(92.dp)
-                .align(Alignment.BottomStart)
-                .offset(x = (-28).dp, y = 20.dp)
-                .clip(CircleShape)
-                .background(Color.White.copy(alpha = 0.05f))
-        )
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+                .fillMaxWidth()
+                .height(200.dp)
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            // Cover Image (full color, full width)
+            Image(
+                painter = painterResource(id = R.drawable.logo_sencsu),
+                contentDescription = "Photo de couverture SenCSU",
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+
+            // Bottom gradient overlay for smooth transition
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(80.dp)
+                    .align(Alignment.BottomCenter)
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color.Transparent,
+                                Color(0xFF0D1B2A)
+                            )
+                        )
+                    )
+            )
+
+            // Top bar overlay (status bar + actions)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "SenCSU",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Black,
+                    color = Color.White
+                )
+            }
+        }
+
+        // ── User Info Section (overlaps cover photo) ──
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .offset(y = (-32).dp),
+            color = Color.Transparent
+        ) {
+            Box(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                // Background card that starts below avatar
                 Surface(
-                    modifier = Modifier.size(54.dp).clickable(onClick = onProfileClick),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 32.dp),
+                    shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                    shadowElevation = 8.dp
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 20.dp, end = 20.dp, top = 50.dp, bottom = 20.dp)
+                    ) {
+                        Text(
+                            "Bonjour, $firstName 👋",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Black,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Surface(
+                                shape = AppShapes.CircleRadius,
+                                color = AppColors.BrandBlue.copy(alpha = 0.1f)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(Icons.Rounded.HealthAndSafety, null, tint = AppColors.BrandBlue, modifier = Modifier.size(14.dp))
+                                    Spacer(Modifier.width(5.dp))
+                                    Text(
+                                        "Espace beneficiaire",
+                                        color = AppColors.BrandBlue,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Avatar overlapping the cover/card boundary
+                Surface(
+                    modifier = Modifier
+                        .padding(start = 20.dp)
+                        .size(64.dp)
+                        .clickable(onClick = onProfileClick),
                     shape = CircleShape,
                     color = Color.White,
-                    border = BorderStroke(2.dp, Color.White.copy(alpha = 0.35f)),
-                    shadowElevation = 8.dp
+                    border = BorderStroke(3.dp, Color.White),
+                    shadowElevation = 6.dp
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         if (adherent?.photo != null) {
@@ -317,73 +393,11 @@ private fun HomeHero(
                                 contentScale = ContentScale.Crop
                             )
                         } else {
-                            Text(initials, fontWeight = FontWeight.Black, fontSize = 19.sp, color = AppColors.BrandBlue)
+                            Text(initials, fontWeight = FontWeight.Black, fontSize = 22.sp, color = AppColors.BrandBlue)
                         }
                     }
                 }
-                Spacer(Modifier.width(14.dp))
-                Column {
-                    Text("Bonjour,", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.76f))
-                    Text(
-                        firstName,
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Black,
-                        color = Color.White,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                IconButton(
-                    onClick = onRefresh,
-                    modifier = Modifier.size(44.dp).background(Color.White.copy(alpha = 0.14f), CircleShape)
-                ) {
-                    if (isLoading) {
-                        CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = Color.White)
-                    } else {
-                        Icon(Icons.Rounded.Refresh, contentDescription = "Actualiser", tint = Color.White)
-                    }
-                }
-                IconButton(
-                    onClick = {},
-                    modifier = Modifier.size(44.dp).background(Color.White.copy(alpha = 0.14f), CircleShape)
-                ) {
-                    Icon(Icons.Rounded.Notifications, contentDescription = "Notifications", tint = Color.White)
-                }
-            }
-        }
-
-        Column(
-            modifier = Modifier.align(Alignment.BottomStart).padding(bottom = 14.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            Surface(
-                shape = AppShapes.CircleRadius,
-                color = Color.White.copy(alpha = 0.14f),
-                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.18f))
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(Icons.Rounded.HealthAndSafety, null, tint = Color.White, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(7.dp))
-                    Text("Espace beneficiaire", color = Color.White, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
-                }
-            }
-            Text(
-                "Votre couverture en un coup d'oeil",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Black,
-                color = Color.White
-            )
-            Text(
-                "Carte, droits, foyer et derniers soins regroupes dans un accueil clair.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color.White.copy(alpha = 0.76f),
-                lineHeight = 20.sp
-            )
         }
     }
 }
@@ -598,6 +612,7 @@ private fun SectionHeader(title: String, subtitle: String, actionLabel: String?,
     }
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 private fun ServiceActivityCard(service: ServiceMedicalDto) {
     val statusColor = when (service.statut?.uppercase()) {

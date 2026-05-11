@@ -12,10 +12,12 @@ data class ServiceMedicalDto(
     val etablissement: String? = null,
     val medecin: String? = null,
     val montant: Double? = 0.0,
-    val montantRembourse: Double? = 0.0,
+    val partAssurance: Double? = 0.0,
+    val ticketModerateur: Double? = 0.0,
     val statut: String? = null,
     val dateService: String? = null,
     val beneficiaireNom: String? = null,
+    val matricule: String? = null,
     val personneChargeId: String? = null
 )
 
@@ -26,6 +28,7 @@ data class ServicesSummaryDto(
     val totalServices: Int? = 0,
     val parType: Map<String, Int>? = emptyMap(),
     val montantTotal: Double? = 0.0,
-    val montantRembourse: Double? = 0.0,
+    val partAssuranceTotal: Double? = 0.0,
+    val ticketModerateurTotal: Double? = 0.0,
     val parStatut: Map<String, Int>? = emptyMap()
 )

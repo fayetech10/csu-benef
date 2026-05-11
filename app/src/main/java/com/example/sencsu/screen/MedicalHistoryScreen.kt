@@ -165,7 +165,8 @@ fun MedicalHistoryScreen(
 private fun MedicalStatsHeader(services: List<ServiceMedicalDto>) {
     val totalServices = services.size
     val totalMontant = services.sumOf { it.montant ?: 0.0 }
-    val totalRembourse = services.sumOf { it.montantRembourse ?: 0.0 }
+    val totalAssurance = services.sumOf { it.partAssurance ?: 0.0 }
+    val totalTicket = services.sumOf { it.ticketModerateur ?: 0.0 }
     val enCours = services.count { it.statut == "EN_COURS" }
 
     Surface(
@@ -205,8 +206,8 @@ private fun MedicalStatsHeader(services: List<ServiceMedicalDto>) {
                 MiniStatCard(
                     modifier = Modifier.weight(1f),
                     icon = Icons.Rounded.CheckCircle,
-                    value = "${(totalRembourse / 1000).toInt()}K",
-                    label = "Remboursé",
+                    value = "${(totalAssurance / 1000).toInt()}K",
+                    label = "Assurance",
                     color = AppColors.StatusGreen
                 )
                 MiniStatCard(
@@ -310,7 +311,7 @@ private fun ServiceTimelineItem(
     }
 
     val statutColor = when (service.statut) {
-        "REMBOURSE" -> AppColors.StatusGreen
+        "PAYE" -> AppColors.StatusGreen
         "VALIDE" -> AppColors.BrandBlue
         "EN_COURS" -> AppColors.StatusOrange
         "REJETE" -> AppColors.StatusRed
@@ -318,7 +319,7 @@ private fun ServiceTimelineItem(
     }
 
     val statutLabel = when (service.statut) {
-        "REMBOURSE" -> "Remboursé"
+        "PAYE" -> "Payé"
         "VALIDE" -> "Validé"
         "EN_COURS" -> "En cours"
         "REJETE" -> "Rejeté"
@@ -488,12 +489,32 @@ private fun ServiceTimelineItem(
                         )
                     }
                     Column(horizontalAlignment = Alignment.End) {
-                        Text("Remboursé", fontSize = 10.sp, color = AppColors.TextSub)
+                        Text("Pris en charge (80%)", fontSize = 10.sp, color = AppColors.TextSub)
                         Text(
-                            "${String.format("%,.0f", service.montantRembourse ?: 0.0)} FCFA",
+                            "${String.format("%,.0f", service.partAssurance ?: 0.0)} FCFA",
                             fontWeight = FontWeight.Bold,
                             fontSize = 13.sp,
                             color = AppColors.StatusGreen
+                        )
+                    }
+                }
+                
+                Spacer(Modifier.height(4.dp))
+                
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column {
+                        // Vide pour l'alignement
+                    }
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text("Ticket modérateur (20%)", fontSize = 10.sp, color = AppColors.TextSub)
+                        Text(
+                            "${String.format("%,.0f", service.ticketModerateur ?: 0.0)} FCFA",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp,
+                            color = AppColors.BrandBlue
                         )
                     }
                 }

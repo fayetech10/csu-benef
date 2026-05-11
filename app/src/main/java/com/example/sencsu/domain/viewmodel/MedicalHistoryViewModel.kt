@@ -22,8 +22,9 @@ class MedicalHistoryViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(MedicalHistoryUiState())
     val uiState = _uiState.asStateFlow()
 
-    private val adherentId: String = savedStateHandle["adherentId"] ?: ""
+    private val matricule: String = savedStateHandle["matricule"] ?: ""
     private val pcId: String? = savedStateHandle["pcId"]
+    private val pcName: String? = savedStateHandle["pcName"]
 
     init {
         loadData()
@@ -33,32 +34,22 @@ class MedicalHistoryViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
             try {
-                if (pcId != null) {
-                    // Charger les services pour une personne en charge spécifique
-                    val response = apiService.getServicesByPersonneCharge(pcId)
+                if (matricule.isNotEmpty()) {
+                    // Charger les services via le matricule (avec pcId optionnel)
+                    val response = apiService.getServicesMedicaux(matricule, pcId)
                     val services = response.data ?: emptyList()
                     _uiState.update {
                         it.copy(
                             services = services,
                             filteredServices = services,
                             isLoading = false,
-                            isForDependent = true,
-                            dependentId = pcId
+                            isForDependent = pcId != null,
+                            dependentId = pcId,
+                            dependentName = pcName
                         )
                     }
-                } else if (adherentId.isNotEmpty()) {
-                    // Charger tous les services de l'adhérent (inclut potentiellement les PC si le backend le permet, 
-                    // ou juste l'adhérent principal)
-                    val response = apiService.getServicesMedicaux(adherentId)
-                    val services = response.data ?: emptyList()
-                    _uiState.update {
-                        it.copy(
-                            services = services,
-                            filteredServices = services,
-                            isLoading = false,
-                            isForDependent = false
-                        )
-                    }
+                } else {
+                    _uiState.update { it.copy(isLoading = false, error = "Matricule non fourni") }
                 }
             } catch (e: Exception) {
                 _uiState.update {

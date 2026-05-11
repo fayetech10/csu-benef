@@ -6,6 +6,7 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -101,7 +102,10 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
 import coil.compose.SubcomposeAsyncImage
+import com.example.sencsu.R
 import com.example.sencsu.components.ServerImage
 import com.example.sencsu.configs.ApiConfig
 import com.example.sencsu.data.remote.dto.AdherentDto
@@ -210,7 +214,7 @@ fun ProfileScreen(
                 ProfileActionGrid(
                     isAgent = isAgent,
                     onEdit = { adherent?.id?.let(onNavigateToEdit) },
-                    onHistory = { adherent?.id?.let(onNavigateToHistory) },
+                    onHistory = { adherent?.matricule?.let(onNavigateToHistory) },
                     onPassword = { showPasswordDialog = true },
                     onMore = { showMoreDialog = true }
                 )
@@ -256,7 +260,7 @@ fun ProfileScreen(
                             icon = Icons.Rounded.MedicalServices,
                             title = "Historique medical",
                             subtitle = "Consulter les soins et remboursements",
-                            onClick = { adherent?.id?.let(onNavigateToHistory) }
+                            onClick = { adherent?.matricule?.let(onNavigateToHistory) }
                         )
                     }
                     SettingsItem(
@@ -413,83 +417,133 @@ private fun ProfileHero(
     onEditClick: () -> Unit,
     onMoreClick: () -> Unit
 ) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(292.dp)
-            .background(Brush.verticalGradient(AppGradients.Brand))
-            .statusBarsPadding()
-            .padding(horizontal = 20.dp, vertical = 18.dp)
-    ) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        // ── Cover Photo Section ──
         Box(
             modifier = Modifier
-                .size(150.dp)
-                .align(Alignment.TopEnd)
-                .offset(x = 42.dp, y = (-46).dp)
-                .clip(CircleShape)
-                .background(Color.White.copy(alpha = 0.06f))
-        )
-        Box(
-            modifier = Modifier
-                .size(94.dp)
-                .align(Alignment.BottomStart)
-                .offset(x = (-28).dp, y = 24.dp)
-                .clip(CircleShape)
-                .background(Color.White.copy(alpha = 0.05f))
-        )
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+                .fillMaxWidth()
+                .height(200.dp)
         ) {
-            Text(
-                "Mon profil",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Black,
-                color = Color.White
+            // Cover Image (full color, full width)
+            Image(
+                painter = painterResource(id = R.drawable.logo_sencsu),
+                contentDescription = "Photo de couverture SenCSU",
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                IconButton(onClick = onEditClick) {
-                    Icon(Icons.Rounded.Edit, contentDescription = "Modifier", tint = Color.White)
-                }
-                IconButton(onClick = onMoreClick) {
-                    Icon(Icons.Rounded.MoreHoriz, contentDescription = "Autres options", tint = Color.White)
+
+            // Bottom gradient overlay for smooth transition
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(80.dp)
+                    .align(Alignment.BottomCenter)
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color.Transparent,
+                                Color(0xFF0D1B2A)
+                            )
+                        )
+                    )
+            )
+
+            // Top bar overlay (status bar + actions)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "Mon profil",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Black,
+                    color = Color.White
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    IconButton(
+                        onClick = onEditClick,
+                        modifier = Modifier
+                            .size(40.dp)
+                            .background(Color.Black.copy(alpha = 0.35f), CircleShape)
+                    ) {
+                        Icon(Icons.Rounded.Edit, contentDescription = "Modifier", tint = Color.White, modifier = Modifier.size(20.dp))
+                    }
+                    IconButton(
+                        onClick = onMoreClick,
+                        modifier = Modifier
+                            .size(40.dp)
+                            .background(Color.Black.copy(alpha = 0.35f), CircleShape)
+                    ) {
+                        Icon(Icons.Rounded.MoreHoriz, contentDescription = "Autres options", tint = Color.White, modifier = Modifier.size(20.dp))
+                    }
                 }
             }
         }
 
-        AnimatedVisibility(
-            visible = showContent,
-            enter = fadeIn(tween(400)) + scaleIn(tween(400), initialScale = 0.94f),
-            modifier = Modifier.align(Alignment.Center)
+        // ── User Info Section (overlaps cover photo) ──
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .offset(y = (-36).dp),
+            color = Color.Transparent
         ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                ProfileAvatar(
-                    filename = adherent?.photo,
-                    initials = initials,
-                    sessionManager = sessionManager
-                )
-                Spacer(Modifier.height(14.dp))
-                Text(
-                    fullName,
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Black,
-                    color = Color.White,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Spacer(Modifier.height(6.dp))
-                StatusBadge(
-                    label = if (adherent?.actif == true) "Compte actif" else "Compte inactif",
-                    active = adherent?.actif == true
-                )
-                if (isLoading) {
-                    Spacer(Modifier.height(10.dp))
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(18.dp),
-                        strokeWidth = 2.dp,
-                        color = Color.White
+            Box(modifier = Modifier.fillMaxWidth()) {
+                // Background card
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 36.dp),
+                    shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                    shadowElevation = 8.dp
+                ) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 52.dp, bottom = 20.dp, start = 20.dp, end = 20.dp)
+                        ) {
+                            Text(
+                                fullName,
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.Black,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Spacer(Modifier.height(6.dp))
+                            StatusBadge(
+                                label = if (adherent?.actif == true) "Compte actif" else "Compte inactif",
+                                active = adherent?.actif == true
+                            )
+                            if (isLoading) {
+                                Spacer(Modifier.height(10.dp))
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(18.dp),
+                                    strokeWidth = 2.dp,
+                                    color = AppColors.BrandBlue
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Avatar overlapping the cover/card boundary
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.TopCenter
+                ) {
+                    ProfileAvatar(
+                        filename = adherent?.photo,
+                        initials = initials,
+                        sessionManager = sessionManager
                     )
                 }
             }
